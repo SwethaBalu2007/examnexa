@@ -600,14 +600,17 @@ async function startExam(examId) {
     });
   }
 
-  // Start recording (video + noise-cancelled audio)
+  // 📹 Start recording (Wait 2 seconds for warm-up to prevent black frame)
   if (ExamRecorder.isSupported()) {
     const stream = FaceMonitor.getProcessedStream();
     if (stream) {
-      ExamRecorder.start(stream, currentUser.id, currentExam.id, currentUser.name, currentExam.title);
-      // Show REC badge
-      const recBadge = document.getElementById('rec-badge');
-      if (recBadge) recBadge.style.display = 'flex';
+      setTimeout(() => {
+        if (!isExamActive) return; // if user quit during warm-up
+        ExamRecorder.start(stream, currentUser.id, currentExam.id, currentUser.name, currentExam.title);
+        // Show REC badge
+        const recBadge = document.getElementById('rec-badge');
+        if (recBadge) recBadge.style.display = 'flex';
+      }, 2000); // 2 second delay ensures camera is fully active
     }
   }
 

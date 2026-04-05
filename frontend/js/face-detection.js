@@ -521,6 +521,10 @@ const FaceMonitor = {
     canvas.width = this.videoEl.videoWidth || 320;
     canvas.height = this.videoEl.videoHeight || 240;
     const ctx = canvas.getContext('2d');
+    // Only take snapshot if the video has started providing real pixels
+    if (this.videoEl.videoWidth === 0 || this.videoEl.currentTime < 0.5) {
+      return null;
+    }
     
     // Draw raw video frame
     ctx.drawImage(this.videoEl, 0, 0, canvas.width, canvas.height);

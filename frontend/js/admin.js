@@ -272,7 +272,12 @@ function setGrid(size, btn) {
 }
 
 function renderProctoring() {
-  const activeExams = ActiveExamDB.getAll();
+  let activeExams = ActiveExamDB.getAll();
+  
+  // 🧹 CLEANUP: Filter out "Ghosts" (stale entries older than 30 seconds)
+  const now = Date.now();
+  activeExams = activeExams.filter(a => (now - (a.lastUpdate || a.startedAt)) < 30000);
+
   const grid = document.getElementById('proctoring-grid');
   const empty = document.getElementById('proctoring-empty');
 

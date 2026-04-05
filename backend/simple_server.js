@@ -612,6 +612,12 @@ const server = http.createServer((req, res) => {
   }
 
   // ── High Speed Live Video Relay ──
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, HEADERS);
+    res.end();
+    return;
+  }
+
   if (req.method === 'POST' && urlPath === '/api/live-feed/push') {
     return parseJSONBody(req).then(body => {
       const { studentId, snapshot, metadata } = body;
