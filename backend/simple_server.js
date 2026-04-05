@@ -60,27 +60,36 @@ const isConfigured = smtpHost && smtpUser && smtpPass &&
 let emailTransporter = null;
 let smtpReady = false;
 
+const smtpReadyTimeout = setTimeout(() => {
+  if (!smtpReady) console.log('🕒 SMTP Note: Still waiting for Gmail to respond to connection check...');
+}, 5000);
+
 if (isConfigured) {
   try {
     const nodemailer = require('nodemailer');
+    console.log(`🔍 SMTP Diagnostics: Host=${smtpHost}, User=${smtpUser ? (smtpUser.substring(0, 3) + '...') : 'NULL'}`);
+    
     emailTransporter = nodemailer.createTransport({
       host: smtpHost,
       port: smtpPort,
       secure: smtpPort === 465,
       auth: { user: smtpUser, pass: smtpPass },
+      connectionTimeout: 15000, 
     });
 
+    console.log('🏁 SMTP Connection Check: Started...');
     emailTransporter.verify((err) => {
+      clearTimeout(smtpReadyTimeout);
       if (err) {
-        console.warn('⚠️ SMTP Connection Error:', err.message);
+        console.warn('❌ SMTP Connection Error:', err.message);
         console.log('   Email features will run in MOCK mode.');
       } else {
         smtpReady = true;
-        console.log('📧 Email system ready (SMTP Connected)');
+        console.log('📧 Email system ready (SMTP Connected to Gmail!)');
       }
     });
   } catch (err) {
-    console.warn('⚠️ Nodemailer missing. Running in MOCK mode.');
+    console.warn('⚠️ SMTP Initialization failed:', err.message);
   }
 } else {
   if (!smtpUser) console.log('❌ SMTP Configuration Error: EMAIL_USER is missing.');
