@@ -274,9 +274,21 @@ function setGrid(size, btn) {
 function renderProctoring() {
   let activeExams = ActiveExamDB.getAll();
   
-  // 🧹 CLEANUP: Filter out "Ghosts" (stale entries older than 30 seconds)
+  // 🧹 CLEANUP: Filter out "Ghosts" (stale entries older than 3 minutes)
   const now = Date.now();
-  activeExams = activeExams.filter(a => (now - (a.lastUpdate || a.startedAt)) < 30000);
+  const STALE_THRESHOLD = 3 * 60 * 1000; // 3 minutes for absolute safety
+  
+  activeExams = activeExams.filter(a => {
+    // Try to get a valid timestamp from lastUpdate or startedAt
+    const rawTime = a.lastUpdate || a.startedAt;
+    const lastTime = rawTime ? new Date(rawTime).getTime() : now;
+    
+    // If the timestamp is valid and within the threshold, keep it
+    if (!isNaN(lastTime)) {
+      return (now - lastTime) < STALE_THRESHOLD;
+    }
+    return true; // Keep if we can't determine age (fail-safe)
+  });
 
   const grid = document.getElementById('proctoring-grid');
   const empty = document.getElementById('proctoring-empty');

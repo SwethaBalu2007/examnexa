@@ -83,7 +83,12 @@ if (isConfigured) {
     console.warn('⚠️ Nodemailer missing. Running in MOCK mode.');
   }
 } else {
-  console.log('⚠️ Email credentials missing. Running in MOCK mode.');
+  if (!smtpUser) console.log('❌ SMTP Configuration Error: EMAIL_USER is missing.');
+  if (!smtpPass) console.log('❌ SMTP Configuration Error: EMAIL_PASS is missing.');
+  if (smtpUser && smtpUser.includes('your-email')) console.log('❌ SMTP Configuration Error: EMAIL_USER is still set to placeholder.');
+  
+  console.log('⚠️ Email credentials incomplete or set to placeholders. Running in MOCK mode.');
+  console.log('👉 Tip: Check your Render Environment Variables for EMAIL_USER and EMAIL_PASS.');
 }
 
 // ─── OTP Store (in-memory, per-email) ─────────────────────────
