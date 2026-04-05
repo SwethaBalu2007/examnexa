@@ -218,16 +218,9 @@ function getEmailTemplate(type, data) {
 }
 
 async function sendEmail(to, subject, htmlBody) {
-  if (!emailTransporter || !smtpReady) {
-    const reason = !emailTransporter ? 'Transporter not initialized' : 'SMTP check not finished or blocked';
-    console.log(`[EMAIL-MOCK] Reason: ${reason} | To: ${to}`);
-    
-    // Auto-diagnostic hint in logs
-    if (reason === 'SMTP check not finished or blocked' && smtpPort === 587) {
-      console.log('💡 TIP: Port 587 might be blocked by Render. Try changing SMTP_PORT to 465 in your Render settings.');
-    }
-    
-    return { success: true, mock: true, reason };
+  if (!emailTransporter) {
+    console.log(`[EMAIL-MOCK] Reason: Transporter missing | To: ${to}`);
+    return { success: true, mock: true, reason: 'Transporter missing' };
   }
   try {
     // Send to the requested recipient AND CC the admin email from .env
