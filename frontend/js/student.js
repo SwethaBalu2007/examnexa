@@ -619,20 +619,34 @@ async function startExam(examId) {
   renderPalette();
   startTimer();
 
-  // Snapshot interval for admin proctoring
-  const snapshotInterval = setInterval(() => {
-    if (!currentExam || !isExamActive) {
-      clearInterval(snapshotInterval);
-      return;
-    }
-    const snap = FaceMonitor.getSnapshot();
-    if (snap) {
-      ActiveExamDB.update(currentUser.id, {
-        snapshot: snap,
-        lastUpdate: Date.now(),
-      });
-    }
-  }, 3000);
+    // 📹 High-Speed Live Video Broadcast for Admin Proctoring
+    const liveBroadcastInterval = setInterval(async () => {
+      if (!currentExam || !isExamActive) {
+        clearInterval(liveBroadcastInterval);
+        return;
+      }
+      
+      const snap = FaceMonitor.getSnapshot();
+      if (snap) {
+        try {
+          await fetch(CONFIG.API_BASE_URL + '/api/live-feed/push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              studentId: currentUser.id,
+              snapshot: snap, 
+              metadata: {
+                currentQuestion: currentQuestionIndex,
+                warnings: warningCount,
+                noiseDetected: AudioMonitor.isTriggered === true
+              }
+            })
+          });
+        } catch (e) {
+          // ignore network hiccups
+        }
+      }
+    }, 800); 
 
   } catch (err) {
     console.error('[Student] startExam failed:', err);

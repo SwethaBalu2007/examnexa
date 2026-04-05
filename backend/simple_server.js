@@ -9,6 +9,9 @@ const PORT = process.env.PORT || 8080;
 const RECORDINGS_DIR = path.join(__dirname, 'recordings');
 const DB_PATH = path.join(__dirname, 'database.json');
 
+// ─── Live Video Stream Relay (Memory Only) ────────────────────
+const liveFeeds = new Map();
+
 // ─── Cloud Database Logic ─────────────────────────────────────
 let cloudDatabase = {
   nexa_users: [],
@@ -606,6 +609,24 @@ const server = http.createServer((req, res) => {
       console.log(`☁️ Cloud Sync: Updated ${key}`);
       sendJSON(res, 200, { success: true, message: `Synced ${key}` });
     }).catch(err => sendError(res, 400, err.message));
+  }
+
+  // ── High Speed Live Video Relay ──
+  if (req.method === 'POST' && urlPath === '/api/live-feed/push') {
+    return parseJSONBody(req).then(body => {
+      const { studentId, snapshot, metadata } = body;
+      if (!studentId) return sendError(res, 400, 'Missing studentId');
+      liveFeeds.set(studentId, { snapshot, metadata, lastUpdate: Date.now() });
+      sendJSON(res, 200, { success: true });
+    }).catch(err => sendError(res, 400, err.message));
+  }
+
+  if (req.method === 'GET' && urlPath === '/api/live-feed/pull') {
+    const urlObj = new URL(req.url, `http://localhost:${PORT}`);
+    const studentId = urlObj.searchParams.get('studentId');
+    if (!studentId) return sendError(res, 400, 'Missing studentId');
+    const feed = liveFeeds.get(studentId) || null;
+    return sendJSON(res, 200, { success: true, feed });
   }
 
   // ── Email API Routes ──

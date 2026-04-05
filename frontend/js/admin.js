@@ -407,34 +407,63 @@ function showProctorDetail(studentId) {
       return;
     }
     
-    // Update Camera Feed
-    const modalCamera = document.getElementById('proctor-detail-camera');
-    if (modalCamera && fresh.snapshot) {
-      modalCamera.innerHTML = `<img src="${fresh.snapshot}" alt="Live feed" style="width:100%;height:100%;object-fit:cover">`;
-    }
-    
-    // Update Progress
-    const progressEl = document.getElementById('detail-progress');
-    if (progressEl) progressEl.textContent = `Q${(fresh.currentQuestion || 0) + 1} / ${totalQuestions}`;
+    // 📹 High-Speed Video Stream Pull
+    const pullLiveFeed = async () => {
+      try {
+        const res = await fetch(CONFIG.API_BASE_URL + `/api/live-feed/pull?studentId=${studentId}`);
+        const result = await res.json();
+        
+        if (result.success && result.feed) {
+          const { snapshot, metadata } = result.feed;
+          
+          // Update Camera View
+          const modalCamera = document.getElementById('proctor-detail-camera');
+          if (modalCamera && snapshot) {
+            modalCamera.innerHTML = `<img src="${snapshot}" alt="Live stream" style="width:100%;height:100%;object-fit:cover; transition: opacity 0.3s ease;">`;
+          }
 
-    // Update Responses/Answers
-    const responsesRow = document.getElementById('detail-responses-row');
-    if (responsesRow && fresh.answers) {
-      const container = responsesRow.querySelector('.badge-container');
-      const hasAnswers = Object.keys(fresh.answers).length > 0;
-      if (container && hasAnswers) {
-        container.innerHTML = Object.entries(fresh.answers).map(([qid, val]) => `
-          <span class="badge badge-primary" style="font-size:0.65rem; padding:2px 8px; border-radius:4px; font-weight:600;">Q${qid.replace('q', '')}: ${['A','B','C','D'][val] || '?'}</span>
-        `).join('');
+          // Update other metadata live
+          if (metadata) {
+            const progressEl = document.getElementById('detail-progress');
+            if (progressEl) progressEl.textContent = `Q${(metadata.currentQuestion || 0) + 1} / ${totalQuestions}`;
+
+            const warningEl = document.getElementById('detail-warnings');
+            if (warningEl) {
+              warningEl.textContent = `${metadata.warnings || 0} / ${maxW}`;
+              const box = document.getElementById('detail-warnings-box');
+              if (box) box.className = `warning-counter ${metadata.warnings === 0 ? 'safe' : (metadata.warnings >= maxW - 1 ? 'high' : 'medium')}`;
+            }
+
+            // Sync Noise
+            const noiseStatus = document.getElementById('proctor-noise-status');
+            if (noiseStatus) {
+              if (metadata.noiseDetected) {
+                noiseStatus.className = 'face-status-indicator away';
+                noiseStatus.innerHTML = '<i class="fa-solid fa-volume-high"></i> 🔊 Sound or Talking Detected!';
+                noiseStatus.style.borderColor = 'var(--danger)';
+              } else {
+                noiseStatus.className = 'face-status-indicator ok';
+                noiseStatus.innerHTML = '<i class="fa-solid fa-check"></i> Silence Maintained';
+                noiseStatus.style.borderColor = '';
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // network error
       }
-    }
+    };
 
-    const warningBoxEl = document.getElementById('detail-warnings-box');
-    const warningEl = document.getElementById('detail-warnings');
-    if (warningEl && warningBoxEl) {
-      warningEl.textContent = `${fresh.warnings || 0} / ${maxW}`;
-      warningBoxEl.className = `warning-counter ${fresh.warnings === 0 ? 'safe' : (fresh.warnings >= maxW - 1 ? 'high' : 'medium')}`;
-    }
+    const streamInterval = setInterval(pullLiveFeed, 800); // Sync display every 800ms
+    
+    // Cleanup on close
+    const modalObserver = new MutationObserver(() => {
+      if (!document.querySelector('.nexa-modal-overlay')) {
+        clearInterval(streamInterval);
+        modalObserver.disconnect();
+      }
+    });
+    modalObserver.observe(document.body, { childList: true });
 
     // Update Noise Status
     const noiseStatus = document.getElementById('proctor-noise-status');
