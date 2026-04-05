@@ -212,8 +212,9 @@ function getEmailTemplate(type, data) {
 
 async function sendEmail(to, subject, htmlBody) {
   if (!emailTransporter || !smtpReady) {
-    console.log(`[EMAIL-MOCK] To: ${to} | Subject: ${subject}`);
-    return { success: true, mock: true };
+    const reason = !emailTransporter ? 'Transporter not initialized' : 'SMTP readiness check failed';
+    console.log(`[EMAIL-MOCK] Reason: ${reason} | To: ${to}`);
+    return { success: true, mock: true, reason };
   }
   try {
     // Send to the requested recipient AND CC the admin email from .env
@@ -523,8 +524,14 @@ async function handleSendOTP(req, res) {
 
     if (result.mock) {
       // In mock mode, return OTP for frontend dev/testing
-      console.log(`[OTP-MOCK] Email: ${email} | OTP: ${otp}`);
-      sendJSON(res, 200, { success: true, mock: true, otp, message: 'OTP generated (SMTP offline — shown for testing)' });
+      console.log(`[OTP-MOCK] Reason: ${result.reason} | Email: ${email} | OTP: ${otp}`);
+      sendJSON(res, 200, { 
+        success: true, 
+        mock: true, 
+        otp, 
+        reason: result.reason,
+        message: `OTP (test mode): ${otp}`
+      });
     } else if (result.success) {
       sendJSON(res, 200, { success: true, message: 'OTP sent to your email' });
     } else {
