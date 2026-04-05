@@ -1,0 +1,16 @@
+{
+  "name": "nexa-exam-monitoring",
+  "version": "1.0.0",
+  "description": "Secure AI-powered exam monitoring system",
+  "main": "index.html",
+  "scripts": {
+    "start": "node simple_server.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.13",
+    "dotenv": "^16.4.5"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

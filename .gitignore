@@ -8,7 +8,10 @@ backend/extra2/
 recordings/
 *.webm
 *.mp4
-*.json
+# Ignore database but ALLOW package files
+database.json
+!package.json
+!package-lock.json
 *.log
 npm-debug.log*
 
