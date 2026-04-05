@@ -276,19 +276,34 @@ function renderProctoring() {
   
   // 🧹 CLEANUP: Filter out "Ghosts" (stale entries older than 3 minutes)
   const now = Date.now();
-  const STALE_THRESHOLD = 3 * 60 * 1000; // 3 minutes for absolute safety
+  const STALE_THRESHOLD = 3 * 60 * 1000; 
   
   activeExams = activeExams.filter(a => {
-    // Try to get a valid timestamp from lastUpdate or startedAt
     const rawTime = a.lastUpdate || a.startedAt;
     const lastTime = rawTime ? new Date(rawTime).getTime() : now;
-    
-    // If the timestamp is valid and within the threshold, keep it
-    if (!isNaN(lastTime)) {
-      return (now - lastTime) < STALE_THRESHOLD;
-    }
-    return true; // Keep if we can't determine age (fail-safe)
+    return !isNaN(lastTime) && (now - lastTime) < STALE_THRESHOLD;
   });
+
+  // 📹 High-Speed LIVE Refresh for the entire grid
+  const refreshAllFeeds = async () => {
+    const activeExams = ActiveExamDB.getAll();
+    for (const student of activeExams) {
+      try {
+        const res = await fetch(CONFIG.API_BASE_URL + `/api/live-feed/pull?studentId=${student.studentId}`);
+        const result = await res.json();
+        if (result.success && result.feed && result.feed.snapshot) {
+          const tileImg = document.querySelector(`.proctor-tile[data-id="${student.studentId}"] .tile-camera img`);
+          if (tileImg) {
+            tileImg.src = result.feed.snapshot;
+          }
+        }
+      } catch (err) {}
+    }
+  };
+
+  // Start the grid refresh interval (every 500ms for ultra-smooth dashboard)
+  if (window._gridRefreshInterval) clearInterval(window._gridRefreshInterval);
+  window._gridRefreshInterval = setInterval(refreshAllFeeds, 500);
 
   const grid = document.getElementById('proctoring-grid');
   const empty = document.getElementById('proctoring-empty');
@@ -312,7 +327,7 @@ function renderProctoring() {
     const noiseActive = a.noiseDetected === true;
 
     return `
-      <div class="proctor-tile ${isSuspicious ? 'suspicious' : ''} ${noiseActive ? 'noise-active' : ''}" onclick="showProctorDetail('${a.studentId}')">
+      <div class="proctor-tile ${isSuspicious ? 'suspicious' : ''} ${noiseActive ? 'noise-active' : ''}" data-id="${a.studentId}" onclick="showProctorDetail('${a.studentId}')">
         <div class="tile-camera">
           ${noiseActive ? `<div class="noise-badge"><i class="fa-solid fa-volume-high"></i> 🔴 Noise Detected</div>` : ''}
           ${snapshot
