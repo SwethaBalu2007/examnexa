@@ -4,6 +4,11 @@ backend/node_modules/
 
 # Local data & logs
 backend/recordings/
+backend/extra2/
+recordings/
+*.webm
+*.mp4
+*.json
 *.log
 npm-debug.log*
 
