@@ -207,6 +207,9 @@
             <div class="input-icon-wrapper">
               <i class="fa-solid fa-lock"></i>
               <input type="password" id="reg-confirm" class="form-control" placeholder="Confirm your password" required>
+              <button type="button" class="password-toggle" onclick="togglePassword('reg-confirm', this)">
+                <i class="fa-solid fa-eye"></i>
+              </button>
             </div>
             <div class="form-error" id="reg-confirm-error"></div>
           </div>
@@ -370,6 +373,9 @@
               <i class="fa-solid fa-lock"></i>
               <input type="password" id="reset-confirm" class="form-control" placeholder="Confirm new password"
                 required>
+              <button type="button" class="password-toggle" onclick="togglePassword('reset-confirm', this)">
+                <i class="fa-solid fa-eye"></i>
+              </button>
             </div>
           </div>
 

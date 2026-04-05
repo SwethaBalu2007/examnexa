@@ -70,11 +70,9 @@ if (isConfigured) {
     console.log(`🔍 SMTP Diagnostics: Host=${smtpHost}, User=${smtpUser ? (smtpUser.substring(0, 3) + '...') : 'NULL'}`);
     
     emailTransporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465, // SSL for 465, TLS/STARTTLS for others
+      service: 'gmail',
       auth: { user: smtpUser, pass: smtpPass },
-      connectionTimeout: 10000, 
+      connectionTimeout: 15000, 
     });
 
     console.log('🏁 SMTP Connection Check: Started...');

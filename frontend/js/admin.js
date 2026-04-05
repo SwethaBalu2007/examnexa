@@ -284,26 +284,11 @@ function renderProctoring() {
     return !isNaN(lastTime) && (now - lastTime) < STALE_THRESHOLD;
   });
 
-  // 📹 High-Speed LIVE Refresh for the entire grid
-  const refreshAllFeeds = async () => {
-    const activeExams = ActiveExamDB.getAll();
-    for (const student of activeExams) {
-      try {
-        const res = await fetch(CONFIG.API_BASE_URL + `/api/live-feed/pull?studentId=${student.studentId}`);
-        const result = await res.json();
-        if (result.success && result.feed && result.feed.snapshot) {
-          const tileImg = document.querySelector(`.proctor-tile[data-id="${student.studentId}"] .tile-camera img`);
-          if (tileImg) {
-            tileImg.src = result.feed.snapshot;
-          }
-        }
-      } catch (err) {}
-    }
-  };
-
-  // Start the grid refresh interval (every 500ms for ultra-smooth dashboard)
-  if (window._gridRefreshInterval) clearInterval(window._gridRefreshInterval);
-  window._gridRefreshInterval = setInterval(refreshAllFeeds, 500);
+  // (Grid auto-refresh removed as requested)
+  if (window._gridRefreshInterval) {
+    clearInterval(window._gridRefreshInterval);
+    window._gridRefreshInterval = null;
+  }
 
   const grid = document.getElementById('proctoring-grid');
   const empty = document.getElementById('proctoring-empty');
