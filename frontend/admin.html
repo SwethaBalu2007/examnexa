@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="NEXA Admin Dashboard — Monitor exams, track students, and manage the system.">
+  <title>NEXA — Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/main.css?v=2">
+  <link rel="stylesheet" href="css/admin.css?v=2">
+</head>
+<body>
+  <div class="dashboard-layout">
+    <!-- ─── Sidebar ──────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">N</div>
+        <h2>NEXA</h2>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Overview</div>
+        <a href="#" class="active" data-section="sec-dashboard"><i class="fa-solid fa-gauge"></i> Dashboard</a>
+        <a href="#" data-section="sec-proctoring"><i class="fa-solid fa-video"></i> Live Proctoring</a>
+
+        <div class="nav-label">Management</div>
+        <a href="#" data-section="sec-students"><i class="fa-solid fa-users"></i> Students</a>
+        <a href="#" data-section="sec-exams"><i class="fa-solid fa-file-lines"></i> Exams</a>
+        <a href="#" data-section="sec-results"><i class="fa-solid fa-chart-column"></i> Results</a>
+
+        <div class="nav-label">Analytics</div>
+        <a href="#" data-section="sec-analytics"><i class="fa-solid fa-chart-line"></i> Analytics</a>
+        <a href="#" data-section="sec-warnings"><i class="fa-solid fa-triangle-exclamation"></i> Warning Logs</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-profile" onclick="logout()">
+          <img id="sidebar-avatar" src="" alt="Avatar" class="avatar">
+          <div class="profile-info">
+            <div class="profile-name" id="sidebar-name">Admin</div>
+            <div class="profile-role">Administrator</div>
+          </div>
+          <i class="fa-solid fa-right-from-bracket" style="color:var(--text-tertiary)"></i>
+        </div>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- ─── Main Content ─────────────────────────────────── -->
+    <main class="main-content">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+          <h1>Admin Dashboard</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="topbar-search">
+            <i class="fa-solid fa-search"></i>
+            <input type="text" placeholder="Search students, exams..." id="global-search" oninput="handleGlobalSearch(this.value)">
+          </div>
+          <button class="notification-btn" onclick="toggleNotifications()">
+            <i class="fa-solid fa-bell"></i>
+            <span class="notification-badge" id="notif-count" style="display:none">0</span>
+          </button>
+          <div class="smtp-status" id="smtp-status-indicator" style="display:none; align-items:center; gap:8px; font-size:0.75rem; background:var(--bg-input); padding:4px 12px; border-radius:30px; border:1px solid var(--border); margin-right:8px; font-weight:600; color:var(--text-secondary)">
+            <span class="dot" style="width:8px; height:8px; border-radius:50%; background:#a4b0be"></span> <span>Mock Mode</span>
+          </div>
+          <div class="connection-pill" style="display:none; align-items:center; gap:8px; font-size:0.75rem; background:var(--bg-input); padding:4px 12px; border-radius:30px; border:1px solid var(--border); margin-right:8px; font-weight:600;">
+            <i class="fa-solid fa-circle" style="color:#2ed573; font-size: 0.6rem;"></i> Connection Stable
+          </div>
+          <button class="btn btn-icon btn-ghost" id="theme-toggle" onclick="ThemeManager.toggle()">
+            <i class="fa-solid fa-sun"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="content-wrapper">
+        <!-- ══════ Dashboard ══════ -->
+        <section class="content-section active" id="sec-dashboard">
+          <div class="stats-grid stagger" id="admin-stats"></div>
+          <div class="grid-2" style="margin-top:24px">
+            <div class="chart-card">
+              <h3><i class="fa-solid fa-chart-pie" style="color:var(--primary)"></i> Exam Results Overview</h3>
+              <div class="chart-container"><canvas id="chart-results"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <h3><i class="fa-solid fa-chart-bar" style="color:var(--accent)"></i> Warnings by Type</h3>
+              <div class="chart-container"><canvas id="chart-warnings"></canvas></div>
+            </div>
+          </div>
+          <div class="chart-card" style="margin-top:20px">
+            <h3><i class="fa-solid fa-table" style="color:var(--warning)"></i> Recent Activity</h3>
+            <div class="table-container" style="margin-top:12px">
+              <table class="data-table" id="recent-activity-table">
+                <thead><tr><th>Student</th><th>Exam</th><th>Status</th><th>Score</th><th>Warnings</th><th>Time</th></tr></thead>
+                <tbody id="recent-activity-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══════ Live Proctoring ══════ -->
+        <section class="content-section" id="sec-proctoring">
+          <div class="section-header">
+            <h2><i class="fa-solid fa-video" style="color:var(--danger)"></i> Live Proctoring</h2>
+            <div class="proctoring-controls">
+              <div class="grid-toggle" id="grid-toggle">
+                <button class="active" onclick="setGrid(4, this)">2×2</button>
+                <button onclick="setGrid(9, this)">3×3</button>
+                <button onclick="setGrid(16, this)">4×4</button>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="renderProctoring()">
+                <i class="fa-solid fa-rotate-right"></i> Refresh
+              </button>
+            </div>
+          </div>
+          <div class="proctoring-grid grid-4" id="proctoring-grid"></div>
+          <div class="empty-state" id="proctoring-empty" style="display:none">
+            <i class="fa-solid fa-video-slash"></i>
+            <h3>No Active Students</h3>
+            <p>No students are currently taking an exam.</p>
+          </div>
+        </section>
+
+        <!-- ══════ Students ══════ -->
+        <section class="content-section" id="sec-students">
+          <div class="section-header">
+            <h2>All Students</h2>
+            <input type="text" class="form-control" style="max-width:260px" placeholder="Search students..." oninput="filterTable('', 'students-table')">
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="students-table">
+              <thead><tr><th>Student</th><th>Email</th><th>Exams Taken</th><th>Avg Score</th><th>Total Warnings</th><th>Status</th></tr></thead>
+              <tbody id="students-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ══════ Exams ══════ -->
+        <section class="content-section" id="sec-exams">
+          <div class="section-header">
+            <h2>All Exams</h2>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="exams-table">
+              <thead><tr><th>Exam</th><th>Subject</th><th>Date</th><th>Duration</th><th>Questions</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="exams-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ══════ Results ══════ -->
+        <section class="content-section" id="sec-results">
+          <div class="section-header">
+            <h2>Exam Results</h2>
+            <div class="header-actions" id="results-global-actions">
+              <button class="btn btn-secondary btn-sm" onclick="exportAllResultsCSV()">
+                <i class="fa-solid fa-download"></i> Export All CSV
+              </button>
+            </div>
+          </div>
+          <p style="margin-top:-15px; color:var(--text-tertiary); font-size:0.9rem;">
+            <i class="fa-solid fa-circle-info" style="color:var(--primary)"></i> 
+            Select an exam below to view individual student performance, attendance, and **download audio/video recordings**.
+          </p>
+
+          <!-- View 1: List of Exams -->
+          <div id="results-exam-view">
+             <div class="grid-3 stagger" id="results-exam-list" style="margin-top:20px;">
+               <!-- injected by js -->
+             </div>
+          </div>
+
+          <!-- View 2: Results for a single Exam -->
+          <div id="results-detail-view" style="display:none; margin-top:20px;">
+             <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; background:var(--card-bg); padding:16px; border-radius:12px; border:1px solid var(--border);">
+               <button class="btn btn-ghost btn-sm" onclick="showResultsExamList()"><i class="fa-solid fa-arrow-left"></i> Back to Exams</button>
+               <div style="text-align:center">
+                 <h3 id="detail-exam-title" style="margin:0; font-size:1.2rem;">Exam Title</h3>
+                 <div id="recording-summary" style="font-size:0.8rem; color:var(--text-tertiary); margin-top:4px;"></div>
+               </div>
+                <div class="flex gap-xs">
+                  <button class="btn btn-secondary btn-sm" onclick="exportCurrentExamCSV()"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+                  <button class="btn btn-primary btn-sm" onclick="exportCurrentExamPDF()"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
+                </div>
+             </div>
+             <div class="table-container">
+               <table class="data-table" id="results-table">
+                 <thead><tr><th>Student</th><th>Attempt</th><th>Score</th><th>Percentage</th><th>Result</th><th>Warnings</th><th style="background:rgba(100, 108, 255, 0.1); color:var(--primary)"><i class="fa-solid fa-video"></i> Recording</th><th style="width:110px">Report</th><th>Submitted</th></tr></thead>
+                 <tbody id="results-body"></tbody>
+               </table>
+             </div>
+          </div>
+        </section>
+
+        <!-- ══════ Analytics ══════ -->
+        <section class="content-section" id="sec-analytics">
+          <div class="section-header"><h2>Analytics</h2></div>
+          <div class="grid-2">
+            <div class="chart-card">
+              <h3><i class="fa-solid fa-chart-area" style="color:var(--primary)"></i> Score Distribution</h3>
+              <div class="chart-container"><canvas id="chart-score-dist"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <h3><i class="fa-solid fa-ranking-star" style="color:var(--accent)"></i> Top Students</h3>
+              <div class="chart-container"><canvas id="chart-top-students"></canvas></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══════ Warning Logs ══════ -->
+        <section class="content-section" id="sec-warnings">
+          <div class="section-header">
+            <h2>Warning Logs</h2>
+            <select class="form-control" id="warning-filter-type" style="max-width:180px" onchange="renderWarningLogs()">
+              <option value="">All Types</option>
+              <option value="face_absent">Face Absent</option>
+              <option value="camera_off">Camera Off</option>
+              <option value="tab_switch">Tab Switch</option>
+              <option value="keyboard">Keyboard</option>
+              <option value="right_click">Right Click</option>
+              <option value="copy_paste">Copy/Paste</option>
+            </select>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="warnings-table">
+              <thead><tr><th>Student</th><th>Exam</th><th>Type</th><th>Description</th><th>Time</th></tr></thead>
+              <tbody id="warnings-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- ─── Notifications Panel ───────────────────────────── -->
+  <div class="notifications-panel" id="notifications-panel">
+    <div class="panel-header">
+      <h3><i class="fa-solid fa-bell"></i> Notifications</h3>
+      <div>
+        <button class="btn btn-ghost btn-sm" onclick="NotificationDB.markAllRead(); renderNotifications();">Mark all read</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleNotifications()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    <div class="notifications-list" id="notifications-list"></div>
+  </div>
+
+  <!-- ─── Recording Playback Modal ────────────────────────── -->
+  <div class="nexa-modal-overlay" id="recording-modal">
+    <div class="nexa-modal" style="max-width:800px; width:90%">
+      <div class="nexa-modal-header">
+        <h3 class="modal-title" id="recording-modal-title">📹 Exam Recording</h3>
+        <button class="modal-close-btn" onclick="closeAdminRecording()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="nexa-modal-body" style="padding:0; background:#000;">
+        <video id="recording-player" controls style="width:100%; max-height:70vh; display:block;"></video>
+      </div>
+      <div class="nexa-modal-footer">
+        <a id="recording-download-btn" class="btn btn-primary" href="#" download style="text-decoration:none"><i class="fa-solid fa-download"></i> Download</a>
+        <button class="btn btn-secondary" onclick="closeAdminRecording()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

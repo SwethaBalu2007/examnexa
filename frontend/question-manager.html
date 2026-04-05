@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="NEXA Question Manager — Create and manage exams.">
+  <title>NEXA — Question Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/main.css?v=2">
+  <link rel="stylesheet" href="css/qm.css?v=2">
+</head>
+<body>
+  <div class="dashboard-layout">
+    <!-- ─── Sidebar ──────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">N</div>
+        <h2>NEXA</h2>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Overview</div>
+        <a href="#" class="active" data-section="sec-manage"><i class="fa-solid fa-list-check"></i> Manage Exams</a>
+        <a href="#" data-section="sec-create"><i class="fa-solid fa-plus-circle"></i> Create New Exam</a>
+        <a href="#" data-section="sec-results"><i class="fa-solid fa-chart-bar"></i> Exam Results</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-profile" onclick="logout()">
+          <img id="sidebar-avatar" src="" alt="Avatar" class="avatar">
+          <div class="profile-info">
+            <div class="profile-name" id="sidebar-name">Manager</div>
+            <div class="profile-role">Question Manager</div>
+          </div>
+          <i class="fa-solid fa-right-from-bracket" style="color:var(--text-tertiary)"></i>
+        </div>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- ─── Main Content ─────────────────────────────────── -->
+    <main class="main-content">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+          <h1>Question Manager</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="smtp-status" id="smtp-status-indicator" style="display:none; align-items:center; gap:8px; font-size:0.75rem; background:var(--bg-input); padding:4px 12px; border-radius:30px; border:1px solid var(--border); margin-right:8px; font-weight:600; color:var(--text-secondary)">
+            <span class="dot" style="width:8px; height:8px; border-radius:50%; background:#a4b0be"></span> <span>Mock Mode</span>
+          </div>
+          <div class="connection-pill" style="display:none; align-items:center; gap:8px; font-size:0.75rem; background:var(--bg-input); padding:4px 12px; border-radius:30px; border:1px solid var(--border); margin-right:8px; font-weight:600;">
+            <i class="fa-solid fa-circle" style="color:#2ed573; font-size: 0.6rem;"></i> Connection Stable
+          </div>
+          <button class="btn btn-icon btn-ghost" id="theme-toggle" onclick="ThemeManager.toggle()">
+            <i class="fa-solid fa-sun"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="content-wrapper">
+        <!-- ══════ Manage Exams ══════ -->
+        <section class="content-section active" id="sec-manage">
+          <div class="section-header">
+            <h2><i class="fa-solid fa-list-check" style="color:var(--primary)"></i> My Exams</h2>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn btn-ghost btn-sm" onclick="renderManageExams()" title="Refresh exam statuses">
+                <i class="fa-solid fa-rotate"></i> Refresh
+              </button>
+              <button class="btn btn-primary" onclick="document.querySelector('.sidebar-nav a[data-section=\'sec-create\']').click()">
+                <i class="fa-solid fa-plus"></i> Create Exam
+              </button>
+            </div>
+          </div>
+          <div class="manage-exam-cards" id="manage-exams-grid"></div>
+        </section>
+
+        <!-- ══════ Create / Edit Exam ══════ -->
+        <section class="content-section" id="sec-create">
+          <div class="section-header">
+            <h2 id="builder-title"><i class="fa-solid fa-pen-to-square" style="color:var(--accent)"></i> Create New Exam</h2>
+          </div>
+
+          <form id="exam-builder-form" class="exam-builder" novalidate>
+            <div class="exam-builder-header">
+              <h3 style="font-size:1.1rem;font-weight:700" id="builder-step-title">Step 1: Exam Details</h3>
+            </div>
+
+            <div class="exam-builder-body" id="builder-step-1">
+              <div class="form-grid">
+                <div class="form-group full-width">
+                  <label>Exam Title</label>
+                  <input type="text" class="form-control" id="build-title" placeholder="e.g. Midterm Mathematics" required>
+                </div>
+                <div class="form-group">
+                  <label>Subject</label>
+                  <input type="text" class="form-control" id="build-subject" placeholder="e.g. Mathematics" required>
+                </div>
+                <div class="form-group">
+                  <label>Passing Percentage (%)</label>
+                  <input type="number" class="form-control" id="build-pass" min="1" max="100" value="50" required>
+                </div>
+                <div class="form-group">
+                  <label><i class="fa-solid fa-calendar-plus" style="color:var(--primary)"></i> Start Date</label>
+                  <input type="date" class="form-control" id="build-date" required onchange="syncEndDateTime()">
+                </div>
+                <div class="form-group">
+                  <label><i class="fa-solid fa-clock" style="color:var(--primary)"></i> Start Time</label>
+                  <input type="time" class="form-control" id="build-time" required onchange="syncEndDateTime()">
+                </div>
+                <div class="form-group">
+                  <label><i class="fa-solid fa-hourglass-half" style="color:var(--warning)"></i> Duration (minutes)</label>
+                  <input type="number" class="form-control" id="build-duration" min="5" value="60" required oninput="syncEndDateTime()">
+                </div>
+                <div class="form-group">
+                  <label><i class="fa-solid fa-calendar-xmark" style="color:var(--danger)"></i> End Date</label>
+                  <input type="date" class="form-control" id="build-end-date">
+                  <small style="color:var(--text-tertiary);font-size:0.75rem;margin-top:4px;display:block">Auto-filled from start + duration</small>
+                </div>
+                <div class="form-group">
+                  <label><i class="fa-solid fa-flag-checkered" style="color:var(--danger)"></i> End Time</label>
+                  <input type="time" class="form-control" id="build-end-time">
+                  <small style="color:var(--text-tertiary);font-size:0.75rem;margin-top:4px;display:block">Auto-filled or set manually</small>
+                </div>
+                <div class="form-group">
+                  <label><i class="fa-solid fa-rotate" style="color:var(--primary)"></i> Max Attempts</label>
+                  <input type="number" class="form-control" id="build-max-attempts" min="1" max="10" value="1" required title="How many times a student can attempt this exam">
+                </div>
+                <div class="form-group">
+                  <label><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger)"></i> Warning Limit</label>
+                  <input type="number" class="form-control" id="build-warning-limit" min="1" max="50" value="5" required title="Max warnings before exam is auto-submitted">
+                </div>
+                <div class="form-group">
+                  <label>Shuffle Questions</label>
+                  <label class="switch">
+                    <input type="checkbox" id="build-shuffle" checked>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <div class="form-group full-width mt-2">
+                  <label>Additional Instructions (HTML supported)</label>
+                  <div class="instructions-editor" id="build-instructions" contenteditable="true">
+                    <ul>
+                      <li>Camera must be ON at all times.</li>
+                      <li>No tab switching allowed.</li>
+                      <li>Calculators are prohibited.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="exam-builder-body" id="builder-step-2" style="display:none">
+              <div class="flex-between">
+                <h4>Added Questions</h4>
+                <div class="badge badge-primary">Total: <span id="build-q-count">0</span></div>
+              </div>
+              
+              <div class="question-list" id="build-q-list"></div>
+
+              <div class="bulk-upload-section" style="margin-top:20px; padding:20px; background:var(--bg-card); border:1px dashed var(--primary-light); border-radius:var(--radius-md); text-align:center;">
+                <h4 style="margin-bottom:12px;"><i class="fa-solid fa-file-csv" style="color:var(--primary)"></i> Bulk Upload Questions</h4>
+                <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:16px;">
+                  Upload a CSV file with columns: <strong>Question, Option A, Option B, Option C, Option D, Correct Index (0-3), Marks</strong>
+                </p>
+                <div class="flex-center gap-sm">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="triggerBulkUpload()">
+                    <i class="fa-solid fa-upload"></i> Upload CSV File
+                  </button>
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="downloadSampleCSV()" style="font-size:0.75rem;">
+                    <i class="fa-solid fa-download"></i> Download Sample CSV
+                  </button>
+                </div>
+                <input type="file" id="bulk-q-input" accept=".csv" style="display:none" onchange="handleBulkUpload(event)">
+              </div>
+
+              <div class="add-question-form">
+                <h4><i class="fa-solid fa-plus-circle" style="color:var(--primary)"></i> Add New Question</h4>
+                <div class="form-group">
+                  <label>Question Text</label>
+                  <textarea class="form-control" id="add-q-text" placeholder="Enter your question here..."></textarea>
+                </div>
+                
+                <label style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block">Options</label>
+                <div class="option-inputs">
+                  <div class="option-input-wrapper">
+                    <div class="opt-label">A</div>
+                    <input type="text" class="form-control" id="add-q-opt0" placeholder="Option A">
+                  </div>
+                  <div class="option-input-wrapper">
+                    <div class="opt-label">B</div>
+                    <input type="text" class="form-control" id="add-q-opt1" placeholder="Option B">
+                  </div>
+                  <div class="option-input-wrapper">
+                    <div class="opt-label">C</div>
+                    <input type="text" class="form-control" id="add-q-opt2" placeholder="Option C">
+                  </div>
+                  <div class="option-input-wrapper">
+                    <div class="opt-label">D</div>
+                    <input type="text" class="form-control" id="add-q-opt3" placeholder="Option D">
+                  </div>
+                </div>
+
+                <div class="flex-between" style="margin-top:16px">
+                  <div class="correct-answer-select">
+                    <label>Correct Answer:</label>
+                    <select class="form-control" id="add-q-correct" style="width:100px;margin-top:0">
+                      <option value="0">A</option>
+                      <option value="1">B</option>
+                      <option value="2">C</option>
+                      <option value="3">D</option>
+                    </select>
+                  </div>
+                  <div class="correct-answer-select">
+                    <label>Marks:</label>
+                    <input type="number" class="form-control" id="add-q-marks" value="1" min="1" style="width:80px;margin-top:0">
+                  </div>
+                </div>
+                
+                <button type="button" class="btn btn-secondary mt-3" onclick="addQuestionToBuilder()">
+                  <i class="fa-solid fa-check"></i> Add to Exam
+                </button>
+              </div>
+            </div>
+
+            <div class="exam-builder-footer">
+              <button type="button" class="btn btn-secondary" id="builder-prev-btn" style="display:none" onclick="builderStep(1)">Previous Step</button>
+              <button type="button" class="btn btn-primary" id="builder-next-btn" onclick="builderStep(2)">Next: Add Questions</button>
+              <button type="submit" class="btn btn-primary" id="builder-save-btn" style="display:none">Save Exam</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- ══════ Exam Results (QM) ══════ -->
+        <section class="content-section" id="sec-results">
+          <div class="section-header">
+            <h2><i class="fa-solid fa-chart-bar" style="color:var(--primary)"></i> Submissions & Recordings</h2>
+          </div>
+
+          <!-- View 1: List of My Exams -->
+          <div id="qm-results-exam-view">
+             <div class="grid-3 stagger" id="qm-results-exam-list" style="margin-top:20px;">
+               <!-- Injected by js -->
+             </div>
+          </div>
+
+          <!-- View 2: Detailed Results for one Exam -->
+          <div id="qm-results-detail-view" style="display:none; margin-top:20px;">
+             <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:16px; border-radius:12px; border:1px solid var(--border);">
+               <button class="btn btn-ghost btn-sm" onclick="showResultsExamList()"><i class="fa-solid fa-arrow-left"></i> Back to Exams</button>
+               <h3 id="qm-detail-exam-title" style="margin:0; font-size:1.1rem;">Exam Title</h3>
+               <div class="flex gap-xs">
+                 <button class="btn btn-secondary btn-sm" onclick="exportCurrentExamCSV()"><i class="fa-solid fa-file-csv"></i> CSV</button>
+                 <button class="btn btn-primary btn-sm" onclick="exportCurrentExamPDF()"><i class="fa-solid fa-file-pdf"></i> PDF Summary</button>
+               </div>
+             </div>
+             <div class="table-container">
+                <table class="data-table" id="qm-results-table">
+                  <thead><tr><th>Student</th><th>Attempt</th><th>Score</th><th>Percentage</th><th>Result</th><th>Warnings</th><th>Recording</th><th style="width:110px">Report</th><th>Submitted</th></tr></thead>
+                  <tbody id="qm-results-body"></tbody>
+                </table>
+             </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ─── Recording Playback Modal ────────────────────────── -->
+  <div class="nexa-modal-overlay" id="recording-modal">
+    <div class="nexa-modal" style="max-width:800px; width:90%">
+      <div class="nexa-modal-header">
+        <h3 class="modal-title" id="recording-modal-title">📹 Exam Recording</h3>
+        <button class="modal-close-btn" onclick="closeQMRecording()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="nexa-modal-body" style="padding:0; background:#000;">
+        <video id="recording-player" controls style="width:100%; max-height:70vh; display:block;"></video>
+      </div>
+      <div class="nexa-modal-footer">
+        <a id="recording-download-btn" class="btn btn-primary" href="#" download style="text-decoration:none"><i class="fa-solid fa-download"></i> Download</a>
+        <button class="btn btn-secondary" onclick="closeQMRecording()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/qm.js"></script>
+</body>
+</html>

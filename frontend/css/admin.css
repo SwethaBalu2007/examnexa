@@ -1,0 +1,441 @@
+/* ============================================================
+   NEXA — Admin Module Styles
+   ============================================================ */
+
+/* ─── Live Proctoring Grid ───────────────────────────────── */
+.proctoring-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.grid-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-input);
+  padding: 4px;
+  border-radius: var(--radius-md);
+}
+
+.grid-toggle button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.grid-toggle button:hover { color: var(--text-primary); }
+.grid-toggle button.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.proctoring-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.proctoring-grid.grid-4 { grid-template-columns: repeat(2, 1fr); }
+.proctoring-grid.grid-9 { grid-template-columns: repeat(3, 1fr); }
+.proctoring-grid.grid-16 { grid-template-columns: repeat(4, 1fr); }
+
+/* ─── Proctor Tile ───────────────────────────────────────── */
+.proctor-tile {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition);
+  cursor: pointer;
+  position: relative;
+}
+
+.proctor-tile:hover {
+  border-color: var(--border-active);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.proctor-tile.suspicious {
+  border-color: var(--danger);
+  box-shadow: var(--shadow-danger-glow);
+  animation: pulse-ring 2s ease infinite;
+}
+
+.proctor-tile.noise-active {
+  border-color: var(--warning);
+  box-shadow: 0 0 15px rgba(255, 165, 2, 0.4);
+}
+
+.proctor-tile .tile-camera {
+  position: relative;
+  aspect-ratio: 16/10;
+  background: #0a0a0a;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.proctor-tile .tile-camera::after {
+  content: '\f06e  VIEW LIVE MONITOR';
+  font-family: 'Inter', 'Font Awesome 6 Free';
+  font-weight: 900;
+  position: absolute;
+  inset: 0;
+  background: rgba(108, 99, 255, 0.4);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all var(--transition);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+.proctor-tile:hover .tile-camera::after {
+  opacity: 1;
+}
+
+.proctor-tile .tile-camera img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.proctor-tile .tile-camera .no-feed {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.proctor-tile .tile-camera .no-feed i {
+  font-size: 2rem;
+  opacity: 0.3;
+}
+
+.noise-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: var(--danger);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.65rem;
+  font-weight: 700;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  animation: bounce 0.5s ease infinite alternate;
+}
+
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-3px); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.4); }
+  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 71, 87, 0); }
+  100% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+}
+
+@keyframes pulse-dot {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+.tile-status-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.tile-status-badge.active {
+  background: rgba(0,212,170,0.2);
+  color: var(--accent);
+}
+
+.tile-status-badge.warning {
+  background: rgba(255,71,87,0.2);
+  color: var(--danger);
+}
+
+.tile-warning-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.tile-warning-badge.safe {
+  background: rgba(0,212,170,0.2);
+  color: var(--accent);
+}
+
+.tile-warning-badge.medium {
+  background: rgba(255,165,2,0.2);
+  color: var(--warning);
+}
+
+.tile-warning-badge.high {
+  background: rgba(255,71,87,0.3);
+  color: var(--danger);
+  animation: pulse-ring 1.5s ease infinite;
+}
+
+/* ─── Face & Noise Indicators (Shared with Student) ────────── */
+.face-status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-top: 8px;
+  border: 1px solid transparent;
+  transition: all var(--transition);
+}
+
+.face-status-indicator.ok {
+  background: var(--success-light);
+  color: var(--accent);
+  border-color: rgba(0, 212, 170, 0.2);
+}
+
+.face-status-indicator.away {
+  background: var(--danger-light);
+  color: var(--danger);
+  border-color: rgba(255, 71, 87, 0.2);
+  animation: pulse-ring 1.5s ease infinite;
+}
+
+.face-status-indicator.warning {
+  background: var(--warning-light);
+  color: var(--warning);
+  border-color: rgba(255, 165, 2, 0.3);
+}
+
+.proctor-tile .tile-info {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tile-info .tile-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tile-info .tile-exam {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tile-info .tile-question {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+/* ─── Proctor Detail Modal (wide) ────────────────────────── */
+.proctor-modal {
+  max-width: 800px !important;
+}
+
+.proctor-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.proctor-detail-camera {
+  aspect-ratio: 4/3;
+  background: #000;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.proctor-detail-camera img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.proctor-detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.detail-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+}
+
+.detail-info-row .label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.detail-info-row .value {
+  font-weight: 700;
+}
+
+.warning-timeline {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.warning-timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 0.82rem;
+}
+
+.warning-timeline-item:last-child { border-bottom: none; }
+
+.warning-timeline-item .wt-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--danger-light);
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.warning-timeline-item .wt-text {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.warning-timeline-item .wt-time {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+/* ─── Admin Stats Special ────────────────────────────────── */
+.stat-card .stat-icon.gradient-primary {
+  background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(108,99,255,0.05));
+  color: var(--primary);
+}
+
+.stat-card .stat-icon.gradient-accent {
+  background: linear-gradient(135deg, rgba(0,212,170,0.2), rgba(0,212,170,0.05));
+  color: var(--accent);
+}
+
+.stat-card .stat-icon.gradient-warning {
+  background: linear-gradient(135deg, rgba(255,165,2,0.2), rgba(255,165,2,0.05));
+  color: var(--warning);
+}
+
+.stat-card .stat-icon.gradient-danger {
+  background: linear-gradient(135deg, rgba(255,71,87,0.2), rgba(255,71,87,0.05));
+  color: var(--danger);
+}
+
+.stat-card .stat-icon.gradient-info {
+  background: linear-gradient(135deg, rgba(52,152,219,0.2), rgba(52,152,219,0.05));
+  color: var(--info);
+}
+
+/* ─── Charts Container ───────────────────────────────────── */
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.chart-card h3 {
+  font-size: 1rem;
+  margin-bottom: 16px;
+}
+
+.chart-container {
+  position: relative;
+  height: 280px;
+}
+
+/* ─── Suspicious Highlight Row ───────────────────────────── */
+.data-table tbody tr.suspicious-row {
+  background: var(--danger-light);
+}
+
+.data-table tbody tr.suspicious-row td {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .proctoring-grid.grid-16 { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .proctoring-grid.grid-4,
+  .proctoring-grid.grid-9 { grid-template-columns: repeat(2, 1fr); }
+  .proctoring-grid.grid-16 { grid-template-columns: repeat(2, 1fr); }
+  .proctor-detail-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .proctoring-grid.grid-4,
+  .proctoring-grid.grid-9,
+  .proctoring-grid.grid-16 { grid-template-columns: 1fr; }
+}

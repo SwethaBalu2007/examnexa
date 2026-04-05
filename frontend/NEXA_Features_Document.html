@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXA Project Features</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --primary: #6C63FF;
+      --text-main: #2D3748;
+      --text-muted: #718096;
+      --bg: #F7FAFC;
+      --card-bg: #FFFFFF;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: var(--card-bg);
+      padding: 50px 60px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 50px;
+      padding-bottom: 30px;
+      border-bottom: 2px solid #E2E8F0;
+    }
+    .header h1 {
+      color: var(--primary);
+      font-size: 2.8rem;
+      margin: 0 0 10px 0;
+      letter-spacing: -1px;
+    }
+    .header p {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+    .feature-section {
+      margin-bottom: 40px;
+    }
+    .feature-section h2 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-main);
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      border-left: 4px solid var(--primary);
+      padding-left: 14px;
+    }
+    .feature-section h2 i {
+      color: var(--primary);
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .feature-card {
+      background: var(--bg);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #E2E8F0;
+    }
+    .feature-card h3 {
+      font-size: 1.1rem;
+      margin: 0 0 10px 0;
+      color: var(--text-main);
+    }
+    .feature-card p, .feature-card ul {
+      margin: 0;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+    .feature-card ul {
+      padding-left: 20px;
+      margin-top: 8px;
+    }
+    .feature-card li {
+      margin-bottom: 4px;
+    }
+    .actions {
+      text-align: center;
+      margin: 40px 0;
+    }
+    .btn {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: opacity 0.2s;
+    }
+    .btn:hover {
+      opacity: 0.9;
+    }
+    @media print {
+      body { background: white; }
+      .container { box-shadow: none; padding: 0; margin: 0; max-width: 100%; }
+      .actions { display: none; }
+      .feature-card { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="actions">
+    <button class="btn" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> Download as PDF
+    </button>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <h1>NEXA Exam Monitoring System</h1>
+      <p>Comprehensive Features & Capabilities Overview</p>
+    </div>
+
+    <div class="feature-section">
+      <h2><i class="fa-solid fa-shield-halved"></i> AI-Powered Proctoring & Security</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Real-Time Face Detection</h3>
+          <p>Utilizes advanced AI (face-api.js) to track the student's face continuously. Triggers instant warnings if no face is detected or if multiple faces appear in the same frame.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Camera & Hardware Integrity</h3>
+          <p>Actively polls camera state to detect disconnections, muted tracks, or physical black-frame obstructions (e.g., covering the lens).</p>
+        </div>
+        <div class="feature-card">
+          <h3>Strict Anti-Cheat Engine</h3>
+          <ul>
+            <li>Detects tab-switching & window minimizing.</li>
+            <li>Disables Copy, Paste, Right-Click, and Selection.</li>
+            <li>Blocks Developer Tools shortcuts (F12, Ctrl+Shift+I).</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <h3>Automated Warning System</h3>
+          <p>Maintains a live strike system (configurable). Exceeding the maximum allowed warnings (e.g., 3) results in automatic exam termination.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-section">
+      <h2><i class="fa-solid fa-video"></i> Media Recording & Cancellation</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Persistent Session Recording</h3>
+          <p>The entire exam session (Video + Audio) is recorded in the background and uploaded asynchronously to the secure server as WebM blobs upon submission.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Web-Audio Noise Cancellation</h3>
+          <p>Built-in dynamics compression and high-pass filters strip out background rumble and normalize microphone levels in real-time before saving the recording.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-section">
+      <h2><i class="fa-solid fa-user-tie"></i> Admin & Question Manager Portals</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Live Proctoring Grid</h3>
+          <p>Admins can watch live feeds (auto-refreshing snapshots) of all concurrently active students in responsive 2x2, 3x3, or 4x4 grids.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Interactive Analytics Dashboard</h3>
+          <p>Leverages Chart.js to map pass/fail ratios, warning distributions by exact type, and top student performances.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Exam Configuration Sandbox</h3>
+          <p>Question Managers (QM) can spin up exams with dynamic total times, passing criteria, custom instructions, and option shuffling.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Recording Playback</h3>
+          <p>Admins have dedicated playback controls in their Results table to fetch and review any compiled exam recording directly from the server.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-section">
+      <h2><i class="fa-solid fa-user-graduate"></i> Student Experience</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Streamlined Authentication</h3>
+          <p>Frictionless login combined with an automated procedural Mathematics CAPTCHA for bot protection, entirely bypassing slow SMS/OTP layers.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Interactive Question Palette</h3>
+          <p>Students can navigate cleanly through color-coded question grids showing answered, unanswered, and active statuses.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Result & Certificate Exports</h3>
+          <p>Students can instantly export their results in CSV/Text or rich PDF formats, alongside localized playback for their own exam recordings.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Modern Dynamic Appearance</h3>
+          <p>High-quality "Glassmorphism" UI panels, fluid theme switching (Light/Dark mode), and toast-based notification alerts.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="NEXA Student Dashboard — Manage exams, view results, and track performance.">
+  <title>NEXA — Student Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/main.css?v=2">
+  <link rel="stylesheet" href="css/student.css?v=2">
+</head>
+<body>
+  <div class="dashboard-layout">
+    <!-- ─── Sidebar ──────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">N</div>
+        <h2>NEXA</h2>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="#" class="active" data-section="sec-dashboard"><i class="fa-solid fa-gauge"></i> Dashboard</a>
+        <a href="#" data-section="sec-exams"><i class="fa-solid fa-file-lines"></i> My Exams</a>
+        <a href="#" data-section="sec-results"><i class="fa-solid fa-chart-column"></i> Results</a>
+
+        <div class="nav-label">Account</div>
+        <a href="#" data-section="sec-profile"><i class="fa-solid fa-user"></i> Profile</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-profile" onclick="logout()">
+          <img id="sidebar-avatar" src="" alt="Avatar" class="avatar">
+          <div class="profile-info">
+            <div class="profile-name" id="sidebar-name">Student</div>
+            <div class="profile-role">Student</div>
+          </div>
+          <i class="fa-solid fa-right-from-bracket" style="color:var(--text-tertiary)"></i>
+        </div>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- ─── Main Content ─────────────────────────────────── -->
+    <main class="main-content">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+          <h1 id="page-title">Dashboard</h1>
+        </div>
+        <div class="topbar-right">
+          <button class="notification-btn" onclick="toggleNotifications()">
+            <i class="fa-solid fa-bell"></i>
+            <span class="notification-badge" id="notif-count" style="display:none">0</span>
+          </button>
+          <div class="smtp-status" id="smtp-status-indicator" style="display:none; align-items:center; gap:8px; font-size:0.75rem; background:var(--bg-input); padding:4px 12px; border-radius:30px; border:1px solid var(--border); margin-right:8px; font-weight:600; color:var(--text-secondary)">
+            <span class="dot" style="width:8px; height:8px; border-radius:50%; background:#a4b0be"></span> <span>Mock Mode</span>
+          </div>
+          <div class="connection-pill" style="display:none; align-items:center; gap:8px; font-size:0.75rem; background:var(--bg-input); padding:4px 12px; border-radius:30px; border:1px solid var(--border); margin-right:8px; font-weight:600;">
+            <i class="fa-solid fa-circle" style="color:#2ed573; font-size: 0.6rem;"></i> Connection Stable
+          </div>
+          <button class="btn btn-icon btn-ghost" id="theme-toggle" onclick="ThemeManager.toggle()">
+            <i class="fa-solid fa-sun"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="content-wrapper">
+        <!-- ══════ Dashboard ══════ -->
+        <section class="content-section active" id="sec-dashboard">
+          <div class="stats-grid stagger" id="student-stats"></div>
+          <div class="section-header">
+            <h2><i class="fa-solid fa-bolt" style="color:var(--warning)"></i> Live & Upcoming Exams</h2>
+          </div>
+          <div class="exam-cards-grid stagger" id="dashboard-exams"></div>
+        </section>
+
+        <!-- ══════ My Exams ══════ -->
+        <section class="content-section" id="sec-exams">
+          <div class="section-header">
+            <h2>All Exams</h2>
+            <div class="tabs" id="exam-filter-tabs">
+              <button class="tab active" onclick="filterExams('all', this)">All</button>
+              <button class="tab" onclick="filterExams('live', this)">Live</button>
+              <button class="tab" onclick="filterExams('upcoming', this)">Upcoming</button>
+              <button class="tab" onclick="filterExams('ended', this)">Ended</button>
+            </div>
+          </div>
+          <div class="exam-cards-grid" id="all-exams-grid"></div>
+        </section>
+
+        <!-- ══════ Results ══════ -->
+        <section class="content-section" id="sec-results">
+          <div class="section-header">
+            <h2>My Results</h2>
+          </div>
+          <div id="results-container"></div>
+        </section>
+
+        <!-- ══════ Profile ══════ -->
+        <section class="content-section" id="sec-profile">
+          <div class="card profile-card">
+            <div class="profile-header">
+              <img id="profile-avatar" src="" alt="Avatar" class="profile-avatar">
+              <div class="profile-info">
+                <h2 id="profile-name">Student Name</h2>
+                <p id="profile-email">student@example.com</p>
+                <span class="badge badge-primary" style="margin-top:6px">Student</span>
+              </div>
+            </div>
+            <form id="profile-form">
+              <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" class="form-control" id="edit-name" required>
+              </div>
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" class="form-control" id="edit-email" disabled>
+              </div>
+              <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Save Changes</button>
+            </form>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- ─── Notifications Panel ───────────────────────────── -->
+  <div class="notifications-panel" id="notifications-panel">
+    <div class="panel-header">
+      <h3><i class="fa-solid fa-bell"></i> Notifications</h3>
+      <div>
+        <button class="btn btn-ghost btn-sm" onclick="NotificationDB.markAllRead(); renderNotifications();">Mark all read</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleNotifications()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    <div class="notifications-list" id="notifications-list"></div>
+  </div>
+
+  <!-- ─── Instruction Overlay ───────────────────────────── -->
+  <div class="instruction-overlay" id="instruction-overlay">
+    <div class="instruction-container">
+      <div class="instruction-card">
+        <div class="instruction-header">
+          <h2 id="instruction-exam-title">Exam Instructions</h2>
+          <p>Please read all instructions carefully before starting the exam</p>
+        </div>
+        <div class="instruction-body">
+          <ul class="instruction-list" id="instruction-list">
+            <li><i class="fa-solid fa-video"></i> Your camera must be ON throughout the exam.</li>
+            <li><i class="fa-solid fa-face-smile"></i> Your face must be clearly visible at all times.</li>
+            <li class="warning"><i class="fa-solid fa-sun"></i> Ensure proper lighting in your room.</li>
+            <li><i class="fa-solid fa-user"></i> You must sit alone during the exam.</li>
+            <li><i class="fa-solid fa-image"></i> Maintain a clean background.</li>
+            <li class="warning"><i class="fa-solid fa-shirt"></i> Formal dress code is mandatory.</li>
+            <li class="danger"><i class="fa-solid fa-ban"></i> No tab switching allowed — it will trigger a warning.</li>
+            <li class="danger"><i class="fa-solid fa-keyboard"></i> No keyboard shortcuts (Ctrl, Alt, Shift combinations) allowed.</li>
+            <li class="danger"><i class="fa-solid fa-copy"></i> Copy/Paste is disabled during the exam.</li>
+            <li><i class="fa-solid fa-clock"></i> Timer will auto-submit when time runs out.</li>
+            <li class="danger"><i class="fa-solid fa-triangle-exclamation"></i> Exceeding the warning limit will auto-submit your exam.</li>
+          </ul>
+          <div id="attempt-info"></div>
+          <div id="custom-instructions"></div>
+          <div class="instruction-agree">
+            <input type="checkbox" id="agree-checkbox">
+            <label for="agree-checkbox">I have read and agree to all the above instructions and rules.</label>
+          </div>
+          <div id="tab-integrity-warning" class="card danger-glow animate-pulse" style="display:none; margin-bottom:20px; border-left:4px solid var(--danger); background:rgba(255, 71, 87, 0.05); padding:16px;">
+            <div style="display:flex; gap:16px; align-items:center;">
+              <div style="width:48px; height:48px; border-radius:50%; background:var(--danger-light); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="fa-solid fa-triangle-exclamation" style="color:var(--danger); font-size:1.2rem;"></i>
+              </div>
+              <div>
+                <h4 style="color:var(--danger); margin-bottom:4px; font-size:1.05rem;">Multiple Exam Tabs Detected!</h4>
+                <p id="tab-warning-text" style="font-size:0.875rem; color:var(--text-secondary); margin:0;">
+                  Detected <strong id="duplicate-tab-count">0</strong> other active exam session(s) in this browser.
+                </p>
+                <p style="font-size:0.875rem; font-weight:600; color:var(--text-primary); margin-top:6px;">
+                  Kindly close the extra tabs before starting the examination.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="instruction-footer">
+          <button class="btn btn-secondary" onclick="closeInstructions()">
+            <i class="fa-solid fa-arrow-left"></i> Go Back
+          </button>
+          <button class="btn btn-primary" id="start-exam-btn" disabled onclick="startExamAfterInstructions()">
+            <i class="fa-solid fa-play"></i> Start Exam
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Exam Interface ────────────────────────────────── -->
+  <div class="exam-interface" id="exam-interface">
+    <div class="exam-layout">
+      <!-- Exam Header -->
+      <div class="exam-header">
+        <div class="exam-info">
+          <h3 id="exam-title">Exam Title</h3>
+          <span id="exam-subject">Subject</span>
+        </div>
+        <div class="exam-timer" id="exam-timer-box">
+          <i class="fa-solid fa-clock"></i>
+          <span class="timer-display" id="exam-timer">00:00</span>
+        </div>
+        <div class="exam-header-actions">
+          <div class="badge badge-danger" id="rec-badge" style="display:none; margin-right:12px; animation: pulse 1.5s infinite"><span class="dot"></span> REC</div>
+          <div class="warning-counter safe" id="warning-display">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Warnings: <b id="warning-count-display">0</b> / <b id="warning-max-display">3</b></span>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="confirmSubmitExam()">
+            <i class="fa-solid fa-paper-plane"></i> Submit
+          </button>
+        </div>
+      </div>
+
+      <!-- Question Area -->
+      <div class="exam-question-area">
+        <div class="question-progress">
+          <span class="progress-text" id="q-progress-text">Question 1 of 5</span>
+          <div class="progress-bar" style="flex:1"><div class="progress-fill" id="q-progress-bar" style="width:20%"></div></div>
+        </div>
+        <div class="question-card" id="question-card">
+          <!-- Filled dynamically -->
+        </div>
+        <div class="question-navigation">
+          <button class="btn btn-secondary" id="prev-btn" onclick="prevQuestion()" disabled>
+            <i class="fa-solid fa-arrow-left"></i> Previous
+          </button>
+          <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()">
+            Next <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Exam Sidebar -->
+      <div class="exam-sidebar">
+        <div class="exam-sidebar-section">
+            <h4 style="margin:0;"><i class="fa-solid fa-video"></i> Camera</h4>
+          <div class="camera-preview">
+            <video id="exam-camera" autoplay muted playsinline></video>
+            <canvas id="exam-canvas"></canvas>
+            <div class="camera-status" id="camera-status">
+              <span class="dot"></span> LIVE
+            </div>
+          </div>
+          <div class="face-status-indicator ok" id="face-status">
+            <i class="fa-solid fa-face-smile"></i> Face Detected
+          </div>
+        </div>
+        <div class="exam-sidebar-section">
+          <h4><i class="fa-solid fa-grip"></i> Question Palette</h4>
+          <div class="question-palette" id="question-palette">
+            <!-- Filled dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Grace Timer Overlay ───────────────────────────── -->
+  <div class="grace-timer-overlay" id="grace-overlay">
+    <div class="grace-timer-content">
+      <div class="grace-timer-countdown" id="grace-countdown">15</div>
+      <h2>⚠️ Face Not Detected!</h2>
+      <p id="grace-message">Please look at the camera. Warning will be issued if not resolved.</p>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <!-- Scripts (Proctoring Engine) -->
+  <script src="https://unpkg.com/@vladmandic/face-api/dist/face-api.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/anti-cheat.js"></script>
+  <script src="js/face-detection.js"></script>
+  <script src="js/audio-monitor.js"></script>
+  <script src="js/recorder.js"></script>
+  <script src="js/student.js"></script>
+</body>
+</html>

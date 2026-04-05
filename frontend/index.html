@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="NEXA — Smart Exam Monitoring Dashboard. Secure online examinations with AI-powered proctoring.">
+  <title>NEXA — Smart Exam Monitoring System</title>
+
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+
+<body>
+  <!-- Theme Toggle -->
+  <button class="auth-theme-toggle" id="theme-toggle" onclick="ThemeManager.toggle()" title="Toggle theme">
+    <i class="fa-solid fa-sun"></i>
+  </button>
+
+  <!-- Animated Background -->
+  <div class="auth-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="grid-pattern"></div>
+  </div>
+
+  <div class="auth-page">
+    <!-- ─── Left Hero Panel ─────────────────────────────── -->
+    <div class="auth-hero">
+      <div class="auth-hero-content">
+        <div class="hero-logo">
+          <div class="logo-icon">N</div>
+          <span class="logo-text">NEXA</span>
+        </div>
+
+        <h1>Smart Exam Monitoring System</h1>
+        <p>Secure, AI-powered online examination platform with real-time proctoring,
+          advanced anti-cheating, and comprehensive analytics.</p>
+
+        <div class="auth-features stagger">
+          <div class="auth-feature">
+            <div class="feature-icon" style="background:var(--primary-light);color:var(--primary)">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <span class="feature-text">AI Face Detection</span>
+          </div>
+          <div class="auth-feature">
+            <div class="feature-icon" style="background:var(--accent-light);color:var(--accent)">
+              <i class="fa-solid fa-video"></i>
+            </div>
+            <span class="feature-text">Live Proctoring</span>
+          </div>
+          <div class="auth-feature">
+            <div class="feature-icon" style="background:var(--warning-light);color:var(--warning)">
+              <i class="fa-solid fa-ban"></i>
+            </div>
+            <span class="feature-text">Anti-Cheat System</span>
+          </div>
+          <div class="auth-feature">
+            <div class="feature-icon" style="background:var(--danger-light);color:var(--danger)">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <span class="feature-text">Real-time Analytics</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Right Auth Panel ────────────────────────────── -->
+    <div class="auth-panel">
+      <div class="auth-card" id="auth-card">
+        <!-- Auth Tabs -->
+        <div class="auth-tabs" id="auth-main-tabs">
+          <button class="auth-tab active" data-form="login-form" onclick="switchAuthTab(this)">Sign In</button>
+          <button class="auth-tab" data-form="register-form" onclick="switchAuthTab(this)">Sign Up</button>
+        </div>
+
+        <!-- ════════════ LOGIN FORM ════════════ -->
+        <form class="auth-form active" id="login-form" onsubmit="handleLogin(event)">
+          <div class="auth-card-header">
+            <h2>Welcome Back</h2>
+            <p>Sign in to continue to your dashboard</p>
+          </div>
+
+          <div class="form-group">
+            <label for="login-email">Email Address</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-envelope"></i>
+              <input type="email" id="login-email" class="form-control" placeholder="you@example.com" required>
+            </div>
+            <div class="form-error" id="login-email-error"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="login-password" class="form-control" placeholder="Enter your password"
+                required>
+              <button type="button" class="password-toggle" onclick="togglePassword('login-password', this)">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+            <div class="form-error" id="login-password-error"></div>
+          </div>
+
+          <a class="forgot-link" onclick="showForgotPassword()">Forgot Password?</a>
+
+          <!-- Math CAPTCHA -->
+          <div class="form-group">
+            <label>Verify You're Human</label>
+            <div class="captcha-box">
+              <div class="captcha-question">
+                <span class="captcha-label">Solve:</span>
+                <span class="captcha-expr" id="login-captcha-question"></span>
+                <span class="captcha-eq">=</span>
+              </div>
+              <input type="number" class="captcha-input" id="login-captcha-answer" placeholder="?" required>
+              <button type="button" class="captcha-refresh" onclick="refreshCaptcha('login')" title="New question">
+                <i class="fa-solid fa-rotate-right"></i>
+              </button>
+            </div>
+            <div class="form-error" id="login-captcha-error"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-full" id="login-submit-btn">
+            <i class="fa-solid fa-right-to-bracket"></i> Sign In
+          </button>
+
+          <div class="auth-divider">or continue with</div>
+
+          <button type="button" class="btn-google" onclick="handleGoogleLogin()">
+            <svg class="google-icon" viewBox="0 0 24 24">
+              <path fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
+              <path fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+              <path fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            Sign in with Google
+          </button>
+
+          <div class="auth-footer">
+            Don't have an account? <a onclick="switchAuthTab(document.querySelector('[data-form=register-form]'))">Sign
+              Up</a>
+          </div>
+        </form>
+
+        <!-- ════════════ REGISTER FORM ════════════ -->
+        <form class="auth-form" id="register-form" onsubmit="handleRegister(event)">
+          <div class="auth-card-header">
+            <h2>Create Account</h2>
+            <p>Join NEXA Exam Monitoring System</p>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-name">Full Name</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-user"></i>
+              <input type="text" id="reg-name" class="form-control" placeholder="Enter your full name" required>
+            </div>
+            <div class="form-error" id="reg-name-error"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-email">Email Address</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-envelope"></i>
+              <input type="email" id="reg-email" class="form-control" placeholder="you@example.com" required>
+            </div>
+            <div class="form-error" id="reg-email-error"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-password">Password</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="reg-password" class="form-control" placeholder="Create a strong password"
+                required oninput="updatePasswordStrength(this.value)">
+              <button type="button" class="password-toggle" onclick="togglePassword('reg-password', this)">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+            <div class="password-strength" id="password-strength">
+              <div class="strength-bar">
+                <div class="strength-fill"></div>
+              </div>
+              <span class="strength-text"></span>
+            </div>
+            <div class="form-error" id="reg-password-error"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-confirm">Confirm Password</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="reg-confirm" class="form-control" placeholder="Confirm your password" required>
+            </div>
+            <div class="form-error" id="reg-confirm-error"></div>
+          </div>
+
+          <div class="form-group">
+            <label>Select Your Role</label>
+            <div class="role-selector">
+              <div class="role-option">
+                <input type="radio" name="role" id="role-student" value="student" checked>
+                <label for="role-student">
+                  <i class="fa-solid fa-user-graduate"></i>
+                  <span>Student</span>
+                </label>
+              </div>
+              <div class="role-option">
+                <input type="radio" name="role" id="role-admin" value="admin">
+                <label for="role-admin">
+                  <i class="fa-solid fa-user-shield"></i>
+                  <span>Admin</span>
+                </label>
+              </div>
+              <div class="role-option">
+                <input type="radio" name="role" id="role-qm" value="question_manager">
+                <label for="role-qm">
+                  <i class="fa-solid fa-chalkboard-user"></i>
+                  <span>Question Mgr</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Math CAPTCHA -->
+          <div class="form-group">
+            <label>Verify You're Human</label>
+            <div class="captcha-box">
+              <div class="captcha-question">
+                <span class="captcha-label">Solve:</span>
+                <span class="captcha-expr" id="register-captcha-question"></span>
+                <span class="captcha-eq">=</span>
+              </div>
+              <input type="number" class="captcha-input" id="register-captcha-answer" placeholder="?" required>
+              <button type="button" class="captcha-refresh" onclick="refreshCaptcha('register')" title="New question">
+                <i class="fa-solid fa-rotate-right"></i>
+              </button>
+            </div>
+            <div class="form-error" id="register-captcha-error"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-full" id="register-submit-btn">
+            <i class="fa-solid fa-user-plus"></i> Create Account
+          </button>
+
+          <div class="auth-divider">or continue with</div>
+
+          <button type="button" class="btn-google" onclick="handleGoogleLogin()">
+            <svg class="google-icon" viewBox="0 0 24 24">
+              <path fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
+              <path fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+              <path fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            Sign up with Google
+          </button>
+
+          <div class="auth-footer">
+            Already have an account? <a onclick="switchAuthTab(document.querySelector('[data-form=login-form]'))">Sign
+              In</a>
+          </div>
+        </form>
+
+        <!-- ════════════ FORGOT PASSWORD FORM ════════════ -->
+        <form class="auth-form" id="forgot-form" onsubmit="handleForgotPassword(event)">
+          <div class="auth-card-header">
+            <h2>Reset Password</h2>
+            <p>Enter your email to receive a verification code</p>
+          </div>
+
+          <div class="form-group">
+            <label for="forgot-email">Email Address</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-envelope"></i>
+              <input type="email" id="forgot-email" class="form-control" placeholder="you@example.com" required>
+            </div>
+            <div class="form-error" id="forgot-email-error"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-full">
+            <i class="fa-solid fa-paper-plane"></i> Send OTP Code
+          </button>
+
+          <div class="auth-footer mt-2">
+            <a onclick="showLoginForm()"><i class="fa-solid fa-arrow-left"></i> Back to Sign In</a>
+          </div>
+        </form>
+
+        <!-- ════════════ OTP VERIFICATION FORM ════════════ -->
+        <form class="auth-form" id="otp-form" onsubmit="verifyOTPCode(event)">
+          <div class="auth-card-header">
+            <div style="font-size:3rem;margin-bottom:12px">📧</div>
+            <h2>Verify OTP</h2>
+            <p>Enter the 6-digit code sent to your email</p>
+          </div>
+
+          <div class="otp-inputs" style="display:flex;gap:8px;justify-content:center;margin:24px 0">
+            <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" id="otp-1"
+              oninput="handleOTPInput(this, 'otp-2')" onkeydown="handleOTPKeydown(event, null)"
+              onpaste="handleOTPPaste(event)">
+            <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" id="otp-2"
+              oninput="handleOTPInput(this, 'otp-3')" onkeydown="handleOTPKeydown(event, 'otp-1')">
+            <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" id="otp-3"
+              oninput="handleOTPInput(this, 'otp-4')" onkeydown="handleOTPKeydown(event, 'otp-2')">
+            <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" id="otp-4"
+              oninput="handleOTPInput(this, 'otp-5')" onkeydown="handleOTPKeydown(event, 'otp-3')">
+            <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" id="otp-5"
+              oninput="handleOTPInput(this, 'otp-6')" onkeydown="handleOTPKeydown(event, 'otp-4')">
+            <input type="text" inputmode="numeric" maxlength="1" class="otp-digit" id="otp-6"
+              oninput="handleOTPInput(this, null)" onkeydown="handleOTPKeydown(event, 'otp-5')">
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-full">
+            <i class="fa-solid fa-shield-check"></i> Verify Code
+          </button>
+
+          <div class="auth-footer mt-2" style="display:flex;justify-content:space-between;align-items:center">
+            <a onclick="showForgotPassword()"><i class="fa-solid fa-arrow-left"></i> Change Email</a>
+            <div id="resend-wrapper">
+              <a id="resend-btn" onclick="resendOTP()" style="cursor:pointer;color:var(--primary)"><i
+                  class="fa-solid fa-rotate-right"></i> Resend OTP</a>
+              <span id="resend-timer" style="display:none; font-size:0.8rem; color:var(--text-tertiary)">Resend in <b
+                  id="otp-secs">60</b>s</span>
+            </div>
+          </div>
+        </form>
+
+        <!-- ════════════ RESET PASSWORD FORM ════════════ -->
+        <form class="auth-form" id="reset-form" onsubmit="handleResetPassword(event)">
+          <div class="auth-card-header">
+            <h2>Create New Password</h2>
+            <p>Enter your new password below</p>
+          </div>
+
+          <div class="form-group">
+            <label for="reset-password">New Password</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="reset-password" class="form-control" placeholder="Create new password"
+                required>
+              <button type="button" class="password-toggle" onclick="togglePassword('reset-password', this)">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reset-confirm">Confirm New Password</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="reset-confirm" class="form-control" placeholder="Confirm new password"
+                required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-full">
+            <i class="fa-solid fa-key"></i> Reset Password
+          </button>
+        </form>
+
+        <!-- ════════════ SUCCESS SCREEN ════════════ -->
+        <div class="auth-form" id="success-screen">
+          <div class="success-screen">
+            <div class="success-icon"><i class="fa-solid fa-check"></i></div>
+            <h3 id="success-title">Success!</h3>
+            <p id="success-message">Your action was completed successfully.</p>
+            <button class="btn btn-primary mt-3" onclick="showLoginForm()">
+              <i class="fa-solid fa-right-to-bracket"></i> Go to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEXA Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+
+</html>
