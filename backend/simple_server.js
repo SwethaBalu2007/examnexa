@@ -7,24 +7,59 @@ try { require('dotenv').config(); } catch (_) {}
 
 const PORT = process.env.PORT || 8080;
 const RECORDINGS_DIR = path.join(__dirname, 'recordings');
+const DB_PATH = path.join(__dirname, 'database.json');
+
+// ─── Cloud Database Logic ─────────────────────────────────────
+let cloudDatabase = {
+  nexa_users: [],
+  nexa_exams: [],
+  nexa_results: [],
+  nexa_warnings: [],
+  nexa_notifications: [],
+  nexa_settings: {}
+};
+
+// Load database if it exists
+if (fs.existsSync(DB_PATH)) {
+  try {
+    cloudDatabase = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    console.log('📦 Cloud Database loaded successfully.');
+  } catch (e) {
+    console.error('❌ Error loading database:', e.message);
+  }
+}
+
+function saveDatabase() {
+  try {
+    // Only save keys that are expected
+    const keysToSave = ['nexa_users', 'nexa_exams', 'nexa_results', 'nexa_warnings', 'nexa_notifications', 'nexa_settings'];
+    const dataToSave = {};
+    keysToSave.forEach(k => {
+      if (cloudDatabase[k] !== undefined) dataToSave[k] = cloudDatabase[k];
+    });
+    fs.writeFileSync(DB_PATH, JSON.stringify(dataToSave, null, 2));
+  } catch (e) {
+    console.error('❌ Error saving database:', e.message);
+  }
+}
 
 // ─── SMTP Email Configuration ─────────────────────────────────
+const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
+const smtpUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+const smtpPass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+const smtpFrom = process.env.SMTP_FROM || `NEXA Exam System <${smtpUser}>`;
+
+const isConfigured = smtpHost && smtpUser && smtpPass && 
+                   !smtpUser.includes('your-email') && 
+                   !smtpPass.includes('your-16-char');
+
 let emailTransporter = null;
 let smtpReady = false;
 
-try {
-  const nodemailer = require('nodemailer');
-  const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
-  const smtpUser = process.env.EMAIL_USER || process.env.SMTP_USER;
-  const smtpPass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
-  const smtpFrom = process.env.SMTP_FROM || `NEXA Exam System <${smtpUser}>`;
-
-  const isConfigured = smtpHost && smtpUser && smtpPass && 
-                     !smtpUser.includes('your-email') && 
-                     !smtpPass.includes('your-16-char');
-
-  if (isConfigured) {
+if (isConfigured) {
+  try {
+    const nodemailer = require('nodemailer');
     emailTransporter = nodemailer.createTransport({
       host: smtpHost,
       port: smtpPort,
@@ -32,24 +67,20 @@ try {
       auth: { user: smtpUser, pass: smtpPass },
     });
 
-    // Verify SMTP connection on startup
     emailTransporter.verify((err) => {
       if (err) {
-        console.warn('⚠️  SMTP verification failed:', err.message);
-        console.warn('   Email features will run in offline/mock mode.');
-        smtpReady = false;
+        console.warn('⚠️ SMTP Connection Error:', err.message);
+        console.log('   Email features will run in MOCK mode.');
       } else {
         smtpReady = true;
-        console.log('✅ SMTP Email connected successfully!');
+        console.log('📧 Email system ready (SMTP Connected)');
       }
     });
-  } else {
-    console.log('📧 SMTP not configured — email features in offline mode.');
-    console.log('   Update .env with EMAIL_USER and EMAIL_PASS to enable real emails.');
+  } catch (err) {
+    console.warn('⚠️ Nodemailer missing. Running in MOCK mode.');
   }
-} catch (err) {
-  console.warn('⚠️  Nodemailer not available:', err.message);
-  console.log('   Run: npm install nodemailer dotenv');
+} else {
+  console.log('⚠️ Email credentials missing. Running in MOCK mode.');
 }
 
 // ─── OTP Store (in-memory, per-email) ─────────────────────────
@@ -560,6 +591,22 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && urlPath === '/api/upload-recording') return handleUpload(req, res);
   if (req.method === 'GET'  && urlPath === '/api/recordings/list')   return handleList(req, res);
   if (req.method === 'GET'  && urlPath === '/api/recordings/file')   return handleServeFile(req, res);
+
+  // ── Cloud Sync Routes ──
+  if (req.method === 'GET'  && urlPath === '/api/cloud-sync') {
+    return sendJSON(res, 200, { success: true, data: cloudDatabase });
+  }
+
+  if (req.method === 'POST' && urlPath === '/api/cloud-sync') {
+    return parseJSONBody(req).then(body => {
+      const { key, data } = body;
+      if (!key) return sendError(res, 400, 'Missing key');
+      cloudDatabase[key] = data;
+      saveDatabase();
+      console.log(`☁️ Cloud Sync: Updated ${key}`);
+      sendJSON(res, 200, { success: true, message: `Synced ${key}` });
+    }).catch(err => sendError(res, 400, err.message));
+  }
 
   // ── Email API Routes ──
   if (req.method === 'POST' && urlPath === '/api/email/send-otp')    return handleSendOTP(req, res);

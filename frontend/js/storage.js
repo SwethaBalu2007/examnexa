@@ -15,17 +15,64 @@ const KEYS = {
   RECORDINGS: 'nexa_recordings',
 };
 
+// ─── Cloud Sync Engine ─────────────────────────────────────
+const Sync = {
+  isSyncing: false,
+  
+  // Pull all data from server and overwrite local
+  pullAll: async () => {
+    if (!CONFIG.API_BASE_URL) return;
+    try {
+      const res = await fetch(CONFIG.API_BASE_URL + '/api/cloud-sync');
+      const result = await res.json();
+      if (result.success && result.data) {
+        Object.keys(result.data).forEach(key => {
+          localStorage.setItem(key, JSON.stringify(result.data[key]));
+        });
+        console.log('☁️ Cloud Sync: Received latest data from server.');
+        // Notify app to refresh UI
+        window.dispatchEvent(new CustomEvent('nexa:storage', { detail: { sync: true } }));
+      }
+    } catch (e) {
+      console.warn('☁️ Cloud Sync: Failed to fetch from server.', e.message);
+    }
+  },
+
+  // Push specific key to server
+  push: async (key, data) => {
+    if (!CONFIG.API_BASE_URL) return;
+    try {
+      await fetch(CONFIG.API_BASE_URL + '/api/cloud-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, data })
+      });
+    } catch (e) {
+      console.warn(`☁️ Cloud Sync: Failed to push ${key} to server.`);
+    }
+  }
+};
+
 // ─── Generic Helpers ───────────────────────────────────────
 const Storage = {
   get: (key) => { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } },
   set: (key, value) => {
     localStorage.setItem(key, JSON.stringify(value));
+    
+    // Background Sync to Cloud
+    Sync.push(key, value);
+    
     // Dispatch custom event so same-tab listeners can react
-    // (native 'storage' event only fires in OTHER tabs)
     window.dispatchEvent(new CustomEvent('nexa:storage', { detail: { key } }));
   },
-  remove: (key) => localStorage.removeItem(key),
-  clear: () => Object.values(KEYS).forEach(k => localStorage.removeItem(k)),
+  remove: (key) => {
+    localStorage.removeItem(key);
+    Sync.push(key, null); // Sync deletion
+  },
+  clear: () => Object.values(KEYS).forEach(k => {
+    localStorage.removeItem(k);
+    Sync.push(k, null);
+  }),
 };
 
 // ─── User CRUD ─────────────────────────────────────────────
@@ -447,4 +494,10 @@ function seedDemoData() {
 }
 
 // ─── Initialize on load ────────────────────────────────────
-seedDemoData();
+document.addEventListener('DOMContentLoaded', async () => {
+  // 1. First try to pull latest cloud data
+  await Sync.pullAll();
+  
+  // 2. Then seed if still empty (ensures demo access)
+  seedDemoData();
+});
