@@ -693,7 +693,7 @@ const server = http.createServer((req, res) => {
 
 });
 
-server.listen(PORT, () => {
-  console.log(`🚀 NEXA Server running at http://localhost:${PORT}/`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 NEXA Server LIVE: http://0.0.0.0:${PORT}/`);
   console.log(`📁 Recordings stored in: ${RECORDINGS_DIR}`);
 });
