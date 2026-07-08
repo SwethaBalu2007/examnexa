@@ -741,7 +741,10 @@ function exportCurrentExamCSV() {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `NEXA_${examResults[0].examTitle.replace(/\s+/g,'_')}_Results.csv`;
+  a.style.display = 'none';
+  document.body.appendChild(a);
   a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 200);
   showToast('Results exported as CSV! 📄', 'success');
 }
 
@@ -918,7 +921,10 @@ function exportAllResultsCSV() {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `NEXA_Results_Export_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.style.display = 'none';
+  document.body.appendChild(a);
   a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 200);
   showToast('Results exported as CSV! 📄', 'success');
 }
 

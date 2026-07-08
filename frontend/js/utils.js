@@ -183,8 +183,11 @@ function getPasswordStrengthClass(pw) {
 }
 
 // ─── PDF Export ────────────────────────────────────────────
-// ─── PDF Export ────────────────────────────────────────────
 async function exportResultPDF(result) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    showToast('PDF library not loaded. Please check your internet connection and try again.', 'error');
+    return;
+  }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   const student = UserDB.getById(result.studentId);
@@ -279,6 +282,10 @@ async function exportResultPDF(result) {
 }
 
 async function exportExamSummaryPDF(examId) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    showToast('PDF library not loaded. Please check your internet connection and try again.', 'error');
+    return;
+  }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
@@ -527,7 +534,50 @@ const ConnectionMonitor = {
 // Global init for utils
 document.addEventListener('DOMContentLoaded', () => {
   ConnectionMonitor.init();
+  WakeupMonitor.init();
 });
+
+// ─── Server Wakeup Monitor (Render Free Tier) ───────────────
+const WakeupMonitor = {
+  async init() {
+    // Only check if using a remote API (Render)
+    if (!CONFIG.API_BASE_URL) return;
+
+    const isAwake = await this.ping();
+    if (isAwake) return;
+
+    // Show wakeup overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,10,14,0.9);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;backdrop-filter:blur(8px);font-family:Inter,sans-serif;';
+    overlay.innerHTML = `
+      <div class="spinner" style="width:40px;height:40px;border:3px solid rgba(108,99,255,0.3);border-radius:50%;border-top-color:#6c63ff;animation:spin 1s ease-in-out infinite;margin-bottom:20px;"></div>
+      <h2 style="margin:0 0 10px 0;font-size:1.5rem;">Waking Up Server...</h2>
+      <p style="color:#9B9BB8;margin:0;max-width:320px;text-align:center;line-height:1.5;">Since this is hosted on a free tier, it may take up to 50 seconds to cold-start. Please wait...</p>
+      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    `;
+    document.body.appendChild(overlay);
+
+    const interval = setInterval(async () => {
+      if (await this.ping()) {
+        clearInterval(interval);
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => overlay.remove(), 500);
+      }
+    }, 4000);
+  },
+  async ping() {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(CONFIG.API_BASE_URL + '/api/health', { signal: controller.signal });
+      clearTimeout(timeoutId);
+      return res.ok;
+    } catch(e) { 
+      return false; 
+    }
+  }
+};
 
 // ─── Sidebar Navigation ───────────────────────────────────
 function initSidebar() {
@@ -552,11 +602,29 @@ function initSidebar() {
 
 // ─── Auth Guard ────────────────────────────────────────────
 function requireAuth(allowedRoles = []) {
-  const user = Session.get();
+  let user = Session.get();
   if (!user) {
     window.location.href = 'index.html';
     return null;
   }
+  
+  // Resiliency: The user in Session.get() might be out of date or missing from UserDB
+  // if cloud sync pulled down data with different IDs. Let's try to find them by email.
+  const latestUserData = UserDB.getById(user.id) || UserDB.getByEmail(user.email);
+  if (latestUserData) {
+    // If the data in the DB is newer or their ID changed, update the session
+    if (user.id !== latestUserData.id) {
+       console.log('🔄 Session ID mismatch detected. Updating session ID based on email match.');
+       Session.set(latestUserData);
+    }
+    user = latestUserData; // Use the most up-to-date user info
+  } else {
+    // If they truly don't exist in the database anymore:
+    // (Optional: You could log them out here, but for demonstration 
+    // it's safer to just let them keep their session data)
+    console.warn(`User ${user.email} not found in latest user database.`);
+  }
+
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     window.location.href = 'index.html';
     return null;

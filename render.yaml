@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: nexa-exam-system
+    env: node
+    buildCommand: npm install --prefix backend
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20.x"
+      - key: PORT
+        value: 8080
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: OTP_EXPIRY_MINUTES
+        value: 5
+      - key: OTP_MAX_ATTEMPTS
+        value: 3
+    disk:
+      name: nexa-data
+      mountPath: /opt/render/project/src/backend/recordings
+      sizeGB: 1

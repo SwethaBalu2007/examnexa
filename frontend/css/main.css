@@ -321,7 +321,11 @@ textarea.form-control {
 .input-icon-wrapper .form-control {
   padding-left: 42px;
 }
-.input-icon-wrapper i {
+/* When a password-toggle button is present, add right padding so text doesn't overlap the eye icon */
+.input-icon-wrapper:has(.password-toggle) .form-control {
+  padding-right: 44px;
+}
+.input-icon-wrapper > i:first-child {
   position: absolute;
   left: 14px;
   top: 50%;
@@ -329,6 +333,7 @@ textarea.form-control {
   color: var(--text-tertiary);
   font-size: 0.9rem;
   pointer-events: none;
+  z-index: 1;
 }
 
 .password-toggle {
@@ -341,7 +346,20 @@ textarea.form-control {
   color: var(--text-tertiary);
   cursor: pointer;
   padding: 4px;
-  pointer-events: auto;
+  pointer-events: auto !important;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.password-toggle i {
+  pointer-events: none;
+  font-size: 0.9rem;
+  transition: color var(--transition-fast);
+}
+.password-toggle:hover {
+  color: var(--primary);
 }
 
 /* ─── Cards ──────────────────────────────────────────────── */

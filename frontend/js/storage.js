@@ -20,6 +20,7 @@ const Sync = {
   isSyncing: false,
   
   // Pull all data from server and overwrite local
+  // NOTE: nexa_current_user is a client-only session key — NEVER sync it from server.
   pullAll: async () => {
     if (!CONFIG.API_BASE_URL) return;
     try {
@@ -27,6 +28,8 @@ const Sync = {
       const result = await res.json();
       if (result.success && result.data) {
         Object.keys(result.data).forEach(key => {
+          // Never overwrite the user's session from server data
+          if (key === KEYS.CURRENT_USER) return;
           localStorage.setItem(key, JSON.stringify(result.data[key]));
         });
         console.log('☁️ Cloud Sync: Received latest data from server.');
@@ -39,8 +42,10 @@ const Sync = {
   },
 
   // Push specific key to server
+  // NOTE: nexa_current_user is a client-only session key — NEVER push it to server.
   push: async (key, data) => {
     if (!CONFIG.API_BASE_URL) return;
+    if (key === KEYS.CURRENT_USER) return; // Session is always local-only
     try {
       await fetch(CONFIG.API_BASE_URL + '/api/cloud-sync', {
         method: 'POST',

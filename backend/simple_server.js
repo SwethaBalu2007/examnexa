@@ -273,6 +273,8 @@ function sendJSON(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
   });
   res.end(JSON.stringify(data));
 }
@@ -599,14 +601,30 @@ async function handleNotifyEmail(req, res) {
 }
 
 // ─── Main Server ──────────────────────────────────────────────
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
 const server = http.createServer((req, res) => {
   // CORS preflight
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST', 'Access-Control-Allow-Headers': 'Content-Type' });
+    res.writeHead(204, CORS_HEADERS);
     return res.end();
   }
 
   const urlPath = req.url.split('?')[0];
+
+  // ── Health Check (keeps Render alive & used by monitoring) ──
+  if (req.method === 'GET' && (urlPath === '/api/health' || urlPath === '/health')) {
+    res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+    return res.end(JSON.stringify({ 
+      status: 'ok', 
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString() 
+    }));
+  }
 
   // ── API Routes ──
   if (req.method === 'POST' && urlPath === '/api/upload-recording') return handleUpload(req, res);
@@ -677,7 +695,7 @@ const server = http.createServer((req, res) => {
         res.end('Server error: ' + error.code);
       }
     } else {
-      res.writeHead(200, { 'Content-Type': contentType });
+      res.writeHead(200, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' });
       res.end(content, 'utf-8');
     }
   });
@@ -687,4 +705,23 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 NEXA Server LIVE: http://0.0.0.0:${PORT}/`);
   console.log(`📁 Recordings stored in: ${RECORDINGS_DIR}`);
+
+  // ── Keep-Alive Self-Ping (prevents Render free tier from spinning down) ──
+  if (process.env.RENDER) {
+    const KEEP_ALIVE_INTERVAL = 13 * 60 * 1000; // 13 minutes
+    setInterval(() => {
+      const url = `https://${process.env.RENDER_EXTERNAL_HOSTNAME || 'examnexa.onrender.com'}/api/health`;
+      http.get(url.replace('https://', 'http://'), () => {
+        console.log(`♻️ Keep-alive ping sent at ${new Date().toISOString()}`);
+      }).on('error', () => {
+        // Use https module for self-ping
+        try {
+          require('https').get(url, () => {
+            console.log(`♻️ Keep-alive ping (https) sent at ${new Date().toISOString()}`);
+          }).on('error', () => {});
+        } catch (_) {}
+      });
+    }, KEEP_ALIVE_INTERVAL);
+    console.log('♻️ Keep-alive self-ping enabled (every 13 min)');
+  }
 });
