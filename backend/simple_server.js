@@ -47,55 +47,14 @@ function saveDatabase() {
 }
 
 // ─── SMTP Email Configuration ─────────────────────────────────
-const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
-const smtpUser = process.env.EMAIL_USER || process.env.SMTP_USER;
-const smtpPass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
-const smtpFrom = process.env.SMTP_FROM || `NEXA Exam System <${smtpUser}>`;
+const resendApiKey = process.env.RESEND_API_KEY;
+const isConfigured = !!resendApiKey;
 
-const isConfigured = smtpHost && smtpUser && smtpPass && 
-                   !smtpUser.includes('your-email') && 
-                   !smtpPass.includes('your-16-char');
-
-let emailTransporter = null;
-let smtpReady = false;
-
-const smtpReadyTimeout = setTimeout(() => {
-  if (!smtpReady) console.log('🕒 SMTP Note: Still waiting for Gmail to respond to connection check...');
-}, 5000);
-
-if (isConfigured) {
-  try {
-    const nodemailer = require('nodemailer');
-    console.log(`🔍 SMTP Diagnostics: Host=${smtpHost}, User=${smtpUser ? (smtpUser.substring(0, 3) + '...') : 'NULL'}`);
-    
-    emailTransporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: smtpUser, pass: smtpPass },
-      connectionTimeout: 15000, 
-    });
-
-    console.log('🏁 SMTP Connection Check: Started...');
-    emailTransporter.verify((err) => {
-      clearTimeout(smtpReadyTimeout);
-      if (err) {
-        console.warn('❌ SMTP Connection Error:', err.message);
-        console.log('   Email features will run in MOCK mode.');
-      } else {
-        smtpReady = true;
-        console.log('📧 Email system ready (SMTP Connected to Gmail!)');
-      }
-    });
-  } catch (err) {
-    console.warn('⚠️ SMTP Initialization failed:', err.message);
-  }
+if (!isConfigured) {
+  console.log('⚠️ RESEND_API_KEY is missing. Email features will run in MOCK mode.');
+  console.log('👉 Tip: Check your Render Environment Variables for RESEND_API_KEY.');
 } else {
-  if (!smtpUser) console.log('❌ SMTP Configuration Error: EMAIL_USER is missing.');
-  if (!smtpPass) console.log('❌ SMTP Configuration Error: EMAIL_PASS is missing.');
-  if (smtpUser && smtpUser.includes('your-email')) console.log('❌ SMTP Configuration Error: EMAIL_USER is still set to placeholder.');
-  
-  console.log('⚠️ Email credentials incomplete or set to placeholders. Running in MOCK mode.');
-  console.log('👉 Tip: Check your Render Environment Variables for EMAIL_USER and EMAIL_PASS.');
+  console.log('📧 Email system ready (Resend API configured)');
 }
 
 // ─── OTP Store (in-memory, per-email) ─────────────────────────
@@ -218,25 +177,39 @@ function getEmailTemplate(type, data) {
 }
 
 async function sendEmail(to, subject, htmlBody) {
-  if (!emailTransporter) {
-    console.log(`[EMAIL-MOCK] Reason: Transporter missing | To: ${to}`);
-    return { success: true, mock: true, reason: 'Transporter missing' };
+  if (!isConfigured) {
+    console.log(`[EMAIL-MOCK] Reason: API Key missing | To: ${to}`);
+    return { success: true, mock: true, reason: 'API Key missing' };
   }
   try {
-    // Send to the requested recipient AND CC the admin email from .env
+    // Send to the requested recipient AND CC the admin email from .env (if it exists)
     const recipients = [to];
     if (process.env.EMAIL_USER && process.env.EMAIL_USER !== to) {
       recipients.push(process.env.EMAIL_USER);
     }
 
-    const info = await emailTransporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: recipients.join(', '),
-      subject,
-      html: htmlBody,
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'NEXA Exam System <onboarding@resend.dev>',
+        to: recipients,
+        subject: subject,
+        html: htmlBody
+      })
     });
-    console.log(`[EMAIL] Sent to ${recipients.join(', ')}: ${subject} (${info.messageId})`);
-    return { success: true, messageId: info.messageId };
+
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to send email via Resend');
+    }
+
+    console.log(`[EMAIL] Sent to ${recipients.join(', ')}: ${subject} (${data.id})`);
+    return { success: true, messageId: data.id };
   } catch (err) {
     console.error(`[EMAIL] Failed to send to ${to}:`, err.message);
     return { success: false, error: err.message };
