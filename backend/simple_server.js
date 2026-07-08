@@ -47,14 +47,18 @@ function saveDatabase() {
 }
 
 // ─── SMTP Email Configuration ─────────────────────────────────
-const resendApiKey = process.env.RESEND_API_KEY;
-const isConfigured = !!resendApiKey;
+const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
+const emailjsTemplateId = process.env.EMAILJS_TEMPLATE_ID;
+const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
+const emailjsPrivateKey = process.env.EMAILJS_PRIVATE_KEY;
+
+const isConfigured = emailjsServiceId && emailjsTemplateId && emailjsPublicKey && emailjsPrivateKey;
 
 if (!isConfigured) {
-  console.log('⚠️ RESEND_API_KEY is missing. Email features will run in MOCK mode.');
-  console.log('👉 Tip: Check your Render Environment Variables for RESEND_API_KEY.');
+  console.log('⚠️ EmailJS API Keys are missing. Email features will run in MOCK mode.');
+  console.log('👉 Tip: Check your Render Environment Variables for EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY, EMAILJS_PRIVATE_KEY.');
 } else {
-  console.log('📧 Email system ready (Resend API configured)');
+  console.log('📧 Email system ready (EmailJS API configured)');
 }
 
 // ─── OTP Store (in-memory, per-email) ─────────────────────────
@@ -178,38 +182,35 @@ function getEmailTemplate(type, data) {
 
 async function sendEmail(to, subject, htmlBody) {
   if (!isConfigured) {
-    console.log(`[EMAIL-MOCK] Reason: API Key missing | To: ${to}`);
-    return { success: true, mock: true, reason: 'API Key missing' };
+    console.log(`[EMAIL-MOCK] Reason: EmailJS Keys missing | To: ${to}`);
+    return { success: true, mock: true, reason: 'EmailJS Keys missing' };
   }
   try {
-    // Send to the requested recipient AND CC the admin email from .env (if it exists)
-    const recipients = [to];
-    if (process.env.EMAIL_USER && process.env.EMAIL_USER !== to) {
-      recipients.push(process.env.EMAIL_USER);
-    }
-
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'NEXA Exam System <onboarding@resend.dev>',
-        to: recipients,
-        subject: subject,
-        html: htmlBody
+        service_id: emailjsServiceId,
+        template_id: emailjsTemplateId,
+        user_id: emailjsPublicKey,
+        accessToken: emailjsPrivateKey,
+        template_params: {
+          to_email: to,
+          subject: subject,
+          html_message: htmlBody
+        }
       })
     });
 
-    const data = await res.json();
-    
     if (!res.ok) {
-      throw new Error(data.message || 'Failed to send email via Resend');
+      const errorText = await res.text();
+      throw new Error(errorText || 'Failed to send email via EmailJS');
     }
 
-    console.log(`[EMAIL] Sent to ${recipients.join(', ')}: ${subject} (${data.id})`);
-    return { success: true, messageId: data.id };
+    console.log(`[EMAIL] Sent to ${to}: ${subject} via EmailJS`);
+    return { success: true };
   } catch (err) {
     console.error(`[EMAIL] Failed to send to ${to}:`, err.message);
     return { success: false, error: err.message };
