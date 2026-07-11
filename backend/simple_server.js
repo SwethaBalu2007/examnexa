@@ -52,11 +52,41 @@ const emailjsTemplateId = process.env.EMAILJS_TEMPLATE_ID;
 const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
 const emailjsPrivateKey = process.env.EMAILJS_PRIVATE_KEY;
 
-const isConfigured = emailjsServiceId && emailjsTemplateId && emailjsPublicKey && emailjsPrivateKey;
+const smtpUser = process.env.EMAIL_USER;
+const smtpPass = process.env.EMAIL_PASS;
+const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
+const smtpFrom = process.env.SMTP_FROM || `NEXA System <${smtpUser}>`;
+
+const isSmtpConfigured = !!(smtpUser && smtpPass);
+const isEmailJSConfigured = !!(emailjsServiceId && emailjsTemplateId && emailjsPublicKey && emailjsPrivateKey);
+
+const isConfigured = isSmtpConfigured || isEmailJSConfigured;
+
+let transporter = null;
+
+if (isSmtpConfigured) {
+  try {
+    const nodemailer = require('nodemailer');
+    transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass
+      }
+    });
+    console.log('📧 SMTP Email system configured (Nodemailer ready)');
+  } catch (err) {
+    console.error('❌ Failed to initialize Nodemailer SMTP transport:', err.message);
+  }
+}
 
 if (!isConfigured) {
-  console.log('⚠️ EmailJS API Keys are missing. Email features will run in MOCK mode.');
-  console.log('👉 Tip: Check your Render Environment Variables for EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY, EMAILJS_PRIVATE_KEY.');
+  console.log('⚠️ Email configurations are missing. Email features will run in MOCK mode.');
+} else if (isSmtpConfigured) {
+  console.log('📧 Email system ready (SMTP configured via Nodemailer)');
 } else {
   console.log('📧 Email system ready (EmailJS API configured)');
 }
@@ -182,39 +212,66 @@ function getEmailTemplate(type, data) {
 
 async function sendEmail(to, subject, htmlBody) {
   if (!isConfigured) {
-    console.log(`[EMAIL-MOCK] Reason: EmailJS Keys missing | To: ${to}`);
-    return { success: true, mock: true, reason: 'EmailJS Keys missing' };
+    console.log(`[EMAIL-MOCK] Reason: Email configurations missing | To: ${to}`);
+    return { success: true, mock: true, reason: 'Email configurations missing' };
   }
-  try {
-    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        service_id: emailjsServiceId,
-        template_id: emailjsTemplateId,
-        user_id: emailjsPublicKey,
-        accessToken: emailjsPrivateKey,
-        template_params: {
-          to_email: to,
-          subject: subject,
-          html_message: htmlBody
-        }
-      })
-    });
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || 'Failed to send email via EmailJS');
+  // 1. Try Nodemailer SMTP if configured
+  if (transporter) {
+    try {
+      await transporter.sendMail({
+        from: smtpFrom,
+        to: to,
+        subject: subject,
+        html: htmlBody
+      });
+      console.log(`[EMAIL] Sent to ${to}: ${subject} via SMTP`);
+      return { success: true };
+    } catch (err) {
+      console.error(`[EMAIL] SMTP send failed:`, err.message);
+      if (!isEmailJSConfigured) {
+        return { success: false, error: 'SMTP Send failed: ' + err.message };
+      }
+      console.log('🔄 Attempting fallback to EmailJS...');
     }
-
-    console.log(`[EMAIL] Sent to ${to}: ${subject} via EmailJS`);
-    return { success: true };
-  } catch (err) {
-    console.error(`[EMAIL] Failed to send to ${to}:`, err.message);
-    return { success: false, error: err.message };
   }
+
+  // 2. Try EmailJS fallback
+  if (isEmailJSConfigured) {
+    try {
+      const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Origin': 'http://localhost' // Spoof origin to satisfy EmailJS non-browser blocks
+        },
+        body: JSON.stringify({
+          service_id: emailjsServiceId,
+          template_id: emailjsTemplateId,
+          user_id: emailjsPublicKey,
+          accessToken: emailjsPrivateKey,
+          template_params: {
+            to_email: to,
+            subject: subject,
+            html_message: htmlBody
+          }
+        })
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || 'Failed to send email via EmailJS');
+      }
+
+      console.log(`[EMAIL] Sent to ${to}: ${subject} via EmailJS`);
+      return { success: true };
+    } catch (err) {
+      console.error(`[EMAIL] EmailJS send failed:`, err.message);
+      return { success: false, error: err.message };
+    }
+  }
+
+  return { success: false, error: 'No email transport configuration was successful' };
 }
 
 
