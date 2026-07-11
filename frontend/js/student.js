@@ -151,8 +151,8 @@ function toggleNotifications() {
 }
 
 function renderNotifications() {
-  const notifs = NotificationDB.getAll();
-  const unread = NotificationDB.getUnread().length;
+  const notifs = NotificationDB.getForStudent(currentUser.id);
+  const unread = NotificationDB.getUnreadForStudent(currentUser.id).length;
   const badge = document.getElementById('notif-count');
   badge.textContent = unread;
   badge.style.display = unread > 0 ? 'flex' : 'none';
@@ -178,7 +178,7 @@ function renderNotifications() {
 
 function startNotificationPolling() {
   setInterval(() => {
-    const unread = NotificationDB.getUnread().length;
+    const unread = NotificationDB.getUnreadForStudent(currentUser.id).length;
     const badge = document.getElementById('notif-count');
     badge.textContent = unread;
     badge.style.display = unread > 0 ? 'flex' : 'none';
@@ -1058,7 +1058,7 @@ function playRecording(url, title, filename) {
   player.src = url;
   if (titleEl) titleEl.textContent = `📹 ${title}`;
   if (downloadBtn) {
-    downloadBtn.href = url;
+    downloadBtn.href = getDownloadUrl(url);
     downloadBtn.download = filename || 'recording.webm';
   }
   

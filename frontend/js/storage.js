@@ -18,45 +18,82 @@ const KEYS = {
 // ─── Cloud Sync Engine ─────────────────────────────────────
 const Sync = {
   isSyncing: false,
-  
-  // Pull all data from server and overwrite local
-  // NOTE: nexa_current_user is a client-only session key — NEVER sync it from server.
+
+  // Smart merge: pull from server but NEVER wipe local-only records.
+  // For array keys we union by 'id', so a newly registered user that
+  // the server hasn't persisted yet is NOT lost after a server restart.
   pullAll: async () => {
     if (!CONFIG.API_BASE_URL) return;
     try {
       const res = await fetch(CONFIG.API_BASE_URL + '/api/cloud-sync');
       const result = await res.json();
       if (result.success && result.data) {
+
+        // Keys that are arrays of objects with an 'id' field — merge by id
+        const MERGE_KEYS = [
+          'nexa_users', 'nexa_exams', 'nexa_results',
+          'nexa_warnings', 'nexa_notifications', 'nexa_recordings',
+        ];
+
         Object.keys(result.data).forEach(key => {
-          // Never overwrite the user's session from server data
+          // Session is always local-only
           if (key === KEYS.CURRENT_USER) return;
-          localStorage.setItem(key, JSON.stringify(result.data[key]));
+
+          const serverVal = result.data[key];
+          const localRaw = localStorage.getItem(key);
+          const localVal = localRaw ? JSON.parse(localRaw) : null;
+
+          if (MERGE_KEYS.includes(key) && Array.isArray(serverVal) && Array.isArray(localVal)) {
+            // Merge: start with server data, then add any local records not on server
+            const serverIds = new Set(serverVal.map(r => r.id));
+            const localOnly = localVal.filter(r => !serverIds.has(r.id));
+            const merged = [...serverVal, ...localOnly];
+            localStorage.setItem(key, JSON.stringify(merged));
+          } else if (MERGE_KEYS.includes(key) && Array.isArray(localVal) && (!Array.isArray(serverVal) || serverVal.length === 0)) {
+            // Server returned empty array but we have local data → keep local
+            console.log(`☁️ Cloud Sync: Server returned empty ${key}, keeping local data.`);
+          } else {
+            // For non-array keys (settings, etc.) server wins
+            localStorage.setItem(key, JSON.stringify(serverVal));
+          }
         });
-        console.log('☁️ Cloud Sync: Received latest data from server.');
-        // Notify app to refresh UI
+
+        console.log('☁️ Cloud Sync: Smart merge complete.');
         window.dispatchEvent(new CustomEvent('nexa:storage', { detail: { sync: true } }));
       }
     } catch (e) {
-      console.warn('☁️ Cloud Sync: Failed to fetch from server.', e.message);
+      console.warn('☁️ Cloud Sync: Failed to fetch from server. Local data preserved.', e.message);
     }
   },
 
-  // Push specific key to server
+  // Push specific key to server (with one retry on failure)
   // NOTE: nexa_current_user is a client-only session key — NEVER push it to server.
   push: async (key, data) => {
     if (!CONFIG.API_BASE_URL) return;
     if (key === KEYS.CURRENT_USER) return; // Session is always local-only
-    try {
-      await fetch(CONFIG.API_BASE_URL + '/api/cloud-sync', {
+    const attempt = async () => {
+      const res = await fetch(CONFIG.API_BASE_URL + '/api/cloud-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key, data })
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    };
+    try {
+      await attempt();
     } catch (e) {
-      console.warn(`☁️ Cloud Sync: Failed to push ${key} to server.`);
+      // Retry once after a short delay (handles server cold-start)
+      try {
+        await new Promise(r => setTimeout(r, 2000));
+        await attempt();
+        console.log(`☁️ Cloud Sync: Retry succeeded for ${key}`);
+      } catch (e2) {
+        console.warn(`☁️ Cloud Sync: Failed to push ${key} (will sync on next load).`);
+      }
     }
   }
 };
+
 
 // ─── Generic Helpers ───────────────────────────────────────
 const Storage = {
@@ -149,7 +186,7 @@ const ExamDB = {
     };
     exams.push(newExam);
     Storage.set(KEYS.EXAMS, exams);
-    NotificationDB.add(`New exam created: "${newExam.title}"`, 'info');
+    NotificationDB.add(`New exam created: "${newExam.title}"`, 'info', 'all');
     return newExam;
   },
 
@@ -183,7 +220,9 @@ const ResultDB = {
     results.push(newResult);
     Storage.set(KEYS.RESULTS, results);
     const status = newResult.passed ? '✅ PASSED' : '❌ FAILED';
-    NotificationDB.add(`${newResult.studentName} ${status} "${newResult.examTitle}" — ${newResult.percentage}%`, newResult.passed ? 'success' : 'warning');
+    // Admin sees full result notification; student sees a personalised one
+    NotificationDB.add(`${newResult.studentName} ${status} "${newResult.examTitle}" — ${newResult.percentage}%`, newResult.passed ? 'success' : 'warning', 'admin');
+    NotificationDB.add(`You ${status} "${newResult.examTitle}" — ${newResult.percentage}%`, newResult.passed ? 'success' : 'warning', newResult.studentId);
     return newResult;
   },
 };
@@ -213,9 +252,10 @@ const WarningDB = {
       ActiveExamDB.update(studentId, { warnings: (active.warnings || 0) + 1 });
     }
 
-    // Notify admin
+    // Notify admin and the specific student
     const user = UserDB.getById(studentId);
-    NotificationDB.add(`⚠️ Warning! ${user?.name || 'Student'}: ${description}`, 'warning');
+    NotificationDB.add(`⚠️ Warning! ${user?.name || 'Student'}: ${description}`, 'warning', 'admin');
+    NotificationDB.add(`⚠️ Warning: ${description}`, 'warning', studentId);
     return newWarning;
   },
 
@@ -257,14 +297,26 @@ const ActiveExamDB = {
 // ─── Notifications ─────────────────────────────────────────
 const NotificationDB = {
   getAll: () => Storage.get(KEYS.NOTIFICATIONS) || [],
-  getUnread: () => NotificationDB.getAll().filter(n => !n.read),
 
-  add: (message, type = 'info') => {
+  // Admin sees everything
+  getForAdmin: () => NotificationDB.getAll(),
+
+  // Student sees only their own or 'all' audience notifications
+  getForStudent: (studentId) =>
+    NotificationDB.getAll().filter(n => n.target === 'all' || n.target === studentId),
+
+  getUnread: () => NotificationDB.getAll().filter(n => !n.read),
+  getUnreadForAdmin: () => NotificationDB.getForAdmin().filter(n => !n.read),
+  getUnreadForStudent: (studentId) => NotificationDB.getForStudent(studentId).filter(n => !n.read),
+
+  // target: 'admin' | 'all' | '<studentId>'
+  add: (message, type = 'info', target = 'admin') => {
     const notifs = NotificationDB.getAll();
     notifs.unshift({
       id: generateId('notif'),
       message,
       type, // 'info' | 'warning' | 'success' | 'error'
+      target, // 'admin' = admin only | 'all' = everyone | studentId = that student
       timestamp: new Date().toISOString(),
       read: false,
     });
@@ -280,6 +332,13 @@ const NotificationDB = {
 
   markAllRead: () => {
     const notifs = NotificationDB.getAll().map(n => ({ ...n, read: true }));
+    Storage.set(KEYS.NOTIFICATIONS, notifs);
+  },
+
+  markAllReadForStudent: (studentId) => {
+    const notifs = NotificationDB.getAll().map(n =>
+      (n.target === 'all' || n.target === studentId) ? { ...n, read: true } : n
+    );
     Storage.set(KEYS.NOTIFICATIONS, notifs);
   },
 };
@@ -493,16 +552,25 @@ function seedDemoData() {
   WarningDB.add(s5.id, exam3.id, 'camera_off', 'Camera was turned off');
 
   // Notifications
-  NotificationDB.add('Welcome to NEXA Exam Monitoring System! 🎓', 'info');
-  NotificationDB.add(`Exam "${exam3.title}" is now LIVE with 4 students active`, 'info');
-  NotificationDB.add(`⚠️ ${s4.name} has 2 warnings in English Comprehension`, 'warning');
+  NotificationDB.add('Welcome to NEXA Exam Monitoring System! 🎓', 'info', 'all');
+  NotificationDB.add(`Exam "${exam3.title}" is now LIVE with 4 students active`, 'info', 'admin');
+  NotificationDB.add(`⚠️ ${s4.name} has 2 warnings in English Comprehension`, 'warning', 'admin');
 }
 
 // ─── Initialize on load ────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. First try to pull latest cloud data
   await Sync.pullAll();
-  
-  // 2. Then seed if still empty (ensures demo access)
+
+  // 2. Migrate legacy notifications that have no 'target' field
+  //    (they were admin-level by default, so set target = 'admin')
+  const rawNotifs = Storage.get(KEYS.NOTIFICATIONS) || [];
+  const needsMigration = rawNotifs.some(n => !n.target);
+  if (needsMigration) {
+    const migrated = rawNotifs.map(n => n.target ? n : { ...n, target: 'admin' });
+    localStorage.setItem(KEYS.NOTIFICATIONS, JSON.stringify(migrated));
+  }
+
+  // 3. Then seed if still empty (ensures demo access)
   seedDemoData();
 });

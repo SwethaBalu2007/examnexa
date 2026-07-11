@@ -667,3 +667,11 @@ function filterTable(inputId, tableId) {
     row.style.display = text.includes(filter) ? '' : 'none';
   });
 }
+
+// ─── Download Helper (Same-Origin & CORS Attachment Support) ───
+function getDownloadUrl(url) {
+  if (url && url.includes('/api/recordings/file')) {
+    return url.includes('?') ? (url + '&download=1') : (url + '?download=1');
+  }
+  return url;
+}

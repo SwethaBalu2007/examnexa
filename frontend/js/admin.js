@@ -93,8 +93,8 @@ function toggleNotifications() {
 }
 
 function renderNotifications() {
-  const notifs = NotificationDB.getAll();
-  const unread = NotificationDB.getUnread().length;
+  const notifs = NotificationDB.getForAdmin();
+  const unread = NotificationDB.getUnreadForAdmin().length;
   const badge = document.getElementById('notif-count');
   badge.textContent = unread;
   badge.style.display = unread > 0 ? 'flex' : 'none';
@@ -120,7 +120,7 @@ function renderNotifications() {
 
 function startNotificationPolling() {
   setInterval(() => {
-    const unread = NotificationDB.getUnread().length;
+    const unread = NotificationDB.getUnreadForAdmin().length;
     const badge = document.getElementById('notif-count');
     badge.textContent = unread;
     badge.style.display = unread > 0 ? 'flex' : 'none';
@@ -696,13 +696,13 @@ async function showExamResults(examId, title) {
           audioBtn = `
             <div class="flex gap-xs" style="margin-top:4px">
               <button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="playAdminRecording('${audioUrl}', '${r.studentName}', '${r.examTitle}', '${rec.audioFilename}')"><i class="fa-solid fa-volume-high"></i> Play Audio</button>
-              <a href="${audioUrl}" download="${rec.audioFilename || 'audio.webm'}" class="btn btn-ghost btn-sm" style="opacity:0.7"><i class="fa-solid fa-download"></i> Save Audio</a>
+              <a href="${getDownloadUrl(audioUrl)}" download="${rec.audioFilename || 'audio.webm'}" class="btn btn-ghost btn-sm" style="opacity:0.7"><i class="fa-solid fa-download"></i> Save Audio</a>
             </div>`;
         }
         recBtn = `
           <div class="flex gap-xs flex-wrap">
             <button class="btn btn-secondary btn-sm" onclick="playAdminRecording('${recUrl}', '${r.studentName}', '${r.examTitle}', '${rec.filename}')"><i class="fa-solid fa-play"></i> Play</button>
-            <a href="${recUrl}" download="${rec.filename}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-download"></i> Save Video</a>
+            <a href="${getDownloadUrl(recUrl)}" download="${rec.filename}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-download"></i> Save Video</a>
             ${audioBtn}
           </div>`;
       }
@@ -771,7 +771,7 @@ function playAdminRecording(url, studentName, examTitle, filename) {
   }
   
   if (downloadBtn) {
-    downloadBtn.href = url;
+    downloadBtn.href = getDownloadUrl(url);
     downloadBtn.download = filename || (isAudio ? 'audio.webm' : 'recording.webm');
     downloadBtn.innerHTML = isAudio ? '<i class="fa-solid fa-download"></i> Download Audio' : '<i class="fa-solid fa-download"></i> Download Video';
   }

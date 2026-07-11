@@ -553,7 +553,7 @@ async function showExamResultsDetail(examId, title) {
           <button class="btn btn-secondary btn-sm" onclick="playQMRecording('${recUrl}', '${r.studentName}', '${r.examTitle}', '${rec.filename}')">
             <i class="fa-solid fa-play"></i> Play
           </button>
-          <a href="${recUrl}" download="${rec.filename}" class="btn btn-secondary btn-sm" style="text-decoration:none">
+          <a href="${getDownloadUrl(recUrl)}" download="${rec.filename}" class="btn btn-secondary btn-sm" style="text-decoration:none">
             <i class="fa-solid fa-download"></i> Save
           </a>
         </div>
@@ -633,7 +633,7 @@ function playQMRecording(url, studentName, examTitle, filename) {
   player.src = url;
   
   if (downloadBtn) {
-    downloadBtn.href = url;
+    downloadBtn.href = getDownloadUrl(url);
     downloadBtn.download = filename || 'recording.webm';
   }
 

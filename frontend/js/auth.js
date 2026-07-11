@@ -143,7 +143,7 @@ function clearErrors() {
 }
 
 // ─── LOGIN ─────────────────────────────────────────────────
-function handleLogin(e) {
+async function handleLogin(e) {
   e.preventDefault();
   clearErrors();
 
@@ -164,7 +164,21 @@ function handleLogin(e) {
 
   if (!valid) return;
 
-  const user = UserDB.getByEmail(email);
+  let user = UserDB.getByEmail(email);
+
+  // If not found immediately, the cloud sync may still be settling (server cold-start).
+  // Wait 2 s, trigger a fresh sync, then try again before showing an error.
+  if (!user) {
+    const btn = e.target.querySelector('button[type="submit"]');
+    const origHTML = btn ? btn.innerHTML : null;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking...'; }
+
+    await Sync.pullAll();
+    user = UserDB.getByEmail(email);
+
+    if (btn) { btn.disabled = false; btn.innerHTML = origHTML; }
+  }
+
   if (!user) {
     showError('login-email-error', 'No account found with this email');
     return;

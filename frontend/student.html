@@ -133,7 +133,7 @@
     <div class="panel-header">
       <h3><i class="fa-solid fa-bell"></i> Notifications</h3>
       <div>
-        <button class="btn btn-ghost btn-sm" onclick="NotificationDB.markAllRead(); renderNotifications();">Mark all read</button>
+        <button class="btn btn-ghost btn-sm" onclick="NotificationDB.markAllReadForStudent(currentUser.id); renderNotifications();">Mark all read</button>
         <button class="btn btn-ghost btn-sm" onclick="toggleNotifications()"><i class="fa-solid fa-xmark"></i></button>
       </div>
     </div>

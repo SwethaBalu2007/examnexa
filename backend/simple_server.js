@@ -433,6 +433,7 @@ function handleServeFile(req, res) {
   const urlObj = new URL(req.url, `http://localhost:${PORT}`);
   const studentId = urlObj.searchParams.get('studentId');
   const filename = urlObj.searchParams.get('filename');
+  const isDownload = urlObj.searchParams.get('download') === '1';
 
   if (!studentId || !filename) return sendError(res, 400, 'Missing studentId or filename');
 
@@ -448,6 +449,16 @@ function handleServeFile(req, res) {
   const ext = path.extname(filename).toLowerCase();
   const mime = ext === '.webm' && filename.includes('.audio') ? 'audio/webm' : (MIME_TYPES[ext] || 'video/webm');
 
+  const headers = {
+    'Content-Length': stat.size,
+    'Content-Type': mime,
+    'Access-Control-Allow-Origin': '*',
+  };
+
+  if (isDownload) {
+    headers['Content-Disposition'] = `attachment; filename="${safe}"`;
+  }
+
   if (range) {
     const parts = range.replace(/bytes=/, '').split('-');
     const start = parseInt(parts[0], 10);
@@ -455,20 +466,23 @@ function handleServeFile(req, res) {
     if (start >= stat.size) return sendError(res, 416, 'Requested Range Not Satisfiable');
     const chunkSize = end - start + 1;
     const file = fs.createReadStream(filePath, { start, end });
-    res.writeHead(206, {
+    
+    const rangeHeaders = {
       'Content-Range': `bytes ${start}-${end}/${stat.size}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': chunkSize,
       'Content-Type': mime,
       'Access-Control-Allow-Origin': '*',
-    });
+    };
+
+    if (isDownload) {
+      rangeHeaders['Content-Disposition'] = `attachment; filename="${safe}"`;
+    }
+
+    res.writeHead(206, rangeHeaders);
     file.pipe(res);
   } else {
-    res.writeHead(200, {
-      'Content-Length': stat.size,
-      'Content-Type': mime,
-      'Access-Control-Allow-Origin': '*',
-    });
+    res.writeHead(200, headers);
     fs.createReadStream(filePath).pipe(res);
   }
 }
@@ -623,7 +637,7 @@ const server = http.createServer((req, res) => {
 
   // ── High Speed Live Video Relay ──
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, HEADERS);
+    res.writeHead(204, CORS_HEADERS);
     res.end();
     return;
   }
@@ -650,7 +664,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && urlPath === '/api/email/verify-otp')  return handleVerifyOTP(req, res);
   if (req.method === 'POST' && urlPath === '/api/email/welcome')     return handleWelcomeEmail(req, res);
   if (req.method === 'POST' && urlPath === '/api/email/notify')      return handleNotifyEmail(req, res);
-  if (req.method === 'GET'  && urlPath === '/api/email/status')      return sendJSON(res, 200, { success: true, smtpReady, configured: !!emailTransporter });
+  if (req.method === 'GET'  && urlPath === '/api/email/status')      return sendJSON(res, 200, { success: true, smtpReady: isConfigured, configured: isConfigured });
 
   // ── Static Files (Serve from ../frontend) ──
   let relativePath = urlPath === '/' ? '/index.html' : urlPath;
