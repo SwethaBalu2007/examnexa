@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in with Google</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg: #FFFFFF;
+      --text: #1F1F1F;
+      --text-secondary: #5F6368;
+      --border: #DADCE0;
+      --primary: #1A73E8;
+      --hover: #F8F9FA;
+      --font: 'Roboto', sans-serif;
+    }
+
+    /* Dark Mode Support based on parent window preference */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #202124;
+        --text: #E8EAED;
+        --text-secondary: #9AA0A6;
+        --border: #3C4043;
+        --primary: #8AB4F8;
+        --hover: #303134;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font);
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .google-logo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      font-size: 24px;
+      margin-bottom: 24px;
+    }
+
+    .google-logo span:nth-child(1) { color: #4285F4; }
+    .google-logo span:nth-child(2) { color: #EA4335; }
+    .google-logo span:nth-child(3) { color: #FBBC05; }
+    .google-logo span:nth-child(4) { color: #34A853; }
+    .google-logo span:nth-child(5) { color: #4285F4; }
+    .google-logo span:nth-child(6) { color: #34A853; }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    p.subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    .account-list {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .account-item {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background-color 0.2s ease;
+    }
+
+    .account-item:last-child {
+      border-bottom: none;
+    }
+
+    .account-item:hover {
+      background-color: var(--hover);
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 16px;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .account-details {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+
+    .name {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .email {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .role-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background-color: rgba(108, 99, 255, 0.1);
+      color: #6C63FF;
+      margin-left: auto;
+    }
+
+    .custom-account-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--primary);
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      margin-bottom: 32px;
+    }
+
+    .custom-account-btn:hover {
+      background-color: var(--hover);
+    }
+
+    /* Custom Input Form */
+    .custom-form {
+      display: none;
+      width: 100%;
+      margin-top: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background-color: transparent;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 4px;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: #FFFFFF;
+      border: none;
+    }
+
+    .btn-secondary {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    footer {
+      margin-top: auto;
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: center;
+      width: 100%;
+    }
+
+    footer a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      margin: 0 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="selection-view">
+    <div class="google-logo">
+      <span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span>
+    </div>
+    <h1>Choose an account</h1>
+    <p class="subtitle">to continue to NEXA Exam System</p>
+
+    <div class="account-list" id="accounts-container">
+      <!-- Generated via JS -->
+    </div>
+
+    <button class="custom-account-btn" onclick="showCustomForm()">
+      <i class="fa-solid fa-user-plus"></i> Use another account
+    </button>
+  </div>
+
+  <!-- Custom Account Form View -->
+  <div class="container" id="form-view" style="display: none;">
+    <div class="google-logo">
+      <span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span>
+    </div>
+    <h1>Create Google Profile</h1>
+    <p class="subtitle">Enter mock credentials for authorization</p>
+
+    <form class="custom-form" id="custom-profile-form" onsubmit="submitCustomProfile(event)" style="display: block;">
+      <div class="form-group">
+        <label for="custom-name">Full Name</label>
+        <input type="text" id="custom-name" required placeholder="John Doe">
+      </div>
+      <div class="form-group">
+        <label for="custom-email">Email Address</label>
+        <input type="email" id="custom-email" required placeholder="john.doe@gmail.com">
+      </div>
+      <div class="form-group">
+        <label for="custom-role">NEXA Role</label>
+        <select id="custom-role">
+          <option value="student">Student (Examinee)</option>
+          <option value="question_manager">Question Manager</option>
+          <option value="admin">Administrator</option>
+        </select>
+      </div>
+
+      <div class="btn-group">
+        <button type="button" class="btn btn-secondary" onclick="hideCustomForm()">Back</button>
+        <button type="submit" class="btn btn-primary">Sign In</button>
+      </div>
+    </form>
+  </div>
+
+  <footer>
+    <span>English (United States)</span>
+    <div style="margin-top: 8px;">
+      <a href="#">Help</a>
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+    </div>
+  </footer>
+
+  <script>
+    // Mock profiles that match default seeded users
+    const mockGoogleProfiles = [
+      { name: "Arjun Mehra", email: "arjun@nexa.com", role: "student", avatar: "https://api.dicebear.com/7.x/initials/svg?seed=Arjun%20Mehra&backgroundColor=6C63FF" },
+      { name: "Dr. Priya Sharma", email: "qm@nexa.com", role: "question_manager", avatar: "https://api.dicebear.com/7.x/initials/svg?seed=Priya%20Sharma&backgroundColor=6C63FF" },
+      { name: "Super Admin", email: "admin@nexa.com", role: "admin", avatar: "https://api.dicebear.com/7.x/initials/svg?seed=Super%20Admin&backgroundColor=6C63FF" }
+    ];
+
+    function renderAccounts() {
+      const container = document.getElementById("accounts-container");
+      container.innerHTML = mockGoogleProfiles.map(p => `
+        <div class="account-item" onclick="selectProfile('${p.email}')">
+          <div class="avatar" style="background-image: url('${p.avatar}')"></div>
+          <div class="account-details">
+            <span class="name">${p.name}</span>
+            <span class="email">${p.email}</span>
+          </div>
+          <span class="role-badge">${p.role.replace('_', ' ')}</span>
+        </div>
+      `).join('');
+    }
+
+    function selectProfile(email) {
+      const profile = mockGoogleProfiles.find(p => p.email === email);
+      if (profile) {
+        sendToParent(profile);
+      }
+    }
+
+    function showCustomForm() {
+      document.getElementById("selection-view").style.display = "none";
+      document.getElementById("form-view").style.display = "flex";
+    }
+
+    function hideCustomForm() {
+      document.getElementById("selection-view").style.display = "flex";
+      document.getElementById("form-view").style.display = "none";
+    }
+
+    function submitCustomProfile(e) {
+      e.preventDefault();
+      const name = document.getElementById("custom-name").value.trim();
+      const email = document.getElementById("custom-email").value.trim().toLowerCase();
+      const role = document.getElementById("custom-role").value;
+      const avatar = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=6C63FF`;
+
+      sendToParent({ name, email, role, avatar });
+    }
+
+    function sendToParent(user) {
+      if (window.opener) {
+        window.opener.postMessage({
+          type: 'GOOGLE_LOGIN_SUCCESS',
+          user: user
+        }, '*');
+        window.close();
+      }
+    }
+
+    // Initialize list
+    renderAccounts();
+  </script>
+</body>
+</html>

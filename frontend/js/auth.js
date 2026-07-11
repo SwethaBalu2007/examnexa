@@ -474,35 +474,60 @@ function handleResetPassword(e) {
   }
 }
 
-// ─── GOOGLE LOGIN (Mock) ──────────────────────────────────
+// ─── GOOGLE LOGIN (Simulated OAuth Popup) ─────────────────
 function handleGoogleLogin() {
-  showToast('Connecting to Google...', 'info');
+  const width = 500;
+  const height = 650;
+  const left = (window.screen.width - width) / 2;
+  const top = (window.screen.height - height) / 2;
 
-  // Simulate OAuth delay
-  setTimeout(async () => {
-    // Check if demo google user exists
-    let googleUser = UserDB.getByEmail('google.user@gmail.com');
+  // Open the simulated Google OAuth account chooser popup
+  const popup = window.open(
+    'google-login.html',
+    'google_oauth',
+    `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no,resizable=yes`
+  );
+
+  if (!popup) {
+    showToast('Popup blocker detected. Please allow popups to sign in with Google.', 'warning');
+  }
+}
+
+// Global listener for the Google login popup message
+window.addEventListener('message', async (event) => {
+  if (event.data && event.data.type === 'GOOGLE_LOGIN_SUCCESS') {
+    const googleData = event.data.user;
+
+    // Check if user already exists
+    let user = UserDB.getByEmail(googleData.email);
     let isNewUser = false;
-    if (!googleUser) {
+
+    if (!user) {
       isNewUser = true;
-      googleUser = UserDB.create({
-        name: 'Google User',
-        email: 'google.user@gmail.com',
-        password: 'google_oauth',
-        role: 'student',
+      user = UserDB.create({
+        name: googleData.name,
+        email: googleData.email,
+        password: 'google_oauth_secure_token',
+        role: googleData.role || 'student'
+      });
+    } else {
+      // Sync names/avatars if matched
+      user = UserDB.update(user.id, {
+        name: googleData.name,
+        avatar: googleData.avatar || user.avatar
       });
     }
 
     if (isNewUser) {
-      // Wait for sync to complete so the new user isn't lost on redirect
+      // Direct push to backend to guarantee the user is saved before page navigation
       await Sync.push(KEYS.USERS, UserDB.getAll());
     }
 
-    Session.set(googleUser);
-    showToast(`Welcome, ${googleUser.name}! 🎉`, 'success');
-    setTimeout(() => redirectToRole(googleUser.role), 800);
-  }, 1500);
-}
+    Session.set(user);
+    showToast(`Welcome back, ${user.name}! 🎉`, 'success');
+    setTimeout(() => redirectToRole(user.role), 800);
+  }
+});
 
 // ─── Role Redirect ─────────────────────────────────────────
 function redirectToRole(role) {
