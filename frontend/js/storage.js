@@ -25,7 +25,16 @@ const Sync = {
   pullAll: async () => {
     if (!CONFIG.API_BASE_URL) return;
     try {
-      const res = await fetch(CONFIG.API_BASE_URL + '/api/cloud-sync');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+
+      let res;
+      try {
+        res = await fetch(CONFIG.API_BASE_URL + '/api/cloud-sync', { signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
       const result = await res.json();
       if (result.success && result.data) {
 

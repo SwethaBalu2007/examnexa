@@ -280,11 +280,22 @@ async function handleForgotPassword(e) {
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending OTP...';
 
   try {
-    const res = await fetch(CONFIG.API_BASE_URL + '/api/email/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, name: user.name }),
-    });
+    // 12-second timeout — Render free tier can take ~10s to wake up
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    let res;
+    try {
+      res = await fetch(CONFIG.API_BASE_URL + '/api/email/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name: user.name }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
     const data = await res.json();
 
     if (data.success) {
@@ -300,7 +311,11 @@ async function handleForgotPassword(e) {
       showToast('❌ ' + (data.error || 'Failed to send OTP'), 'error');
     }
   } catch (err) {
-    showToast('❌ Server error. Please try again.', 'error');
+    if (err.name === 'AbortError') {
+      showToast('⏳ Server is waking up — please wait 30 seconds and try again.', 'warning');
+    } else {
+      showToast('❌ Server error. Please try again.', 'error');
+    }
     console.error(err);
   } finally {
     btn.disabled = false;
