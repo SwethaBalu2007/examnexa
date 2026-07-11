@@ -474,58 +474,111 @@ function handleResetPassword(e) {
   }
 }
 
-// ─── GOOGLE LOGIN (Simulated OAuth Popup) ─────────────────
-function handleGoogleLogin() {
-  const width = 500;
-  const height = 650;
-  const left = (window.screen.width - width) / 2;
-  const top = (window.screen.height - height) / 2;
+// Firebase references
+let firebaseAuth = null;
+let firebaseProvider = null;
 
-  // Open the simulated Google OAuth account chooser popup
-  const popup = window.open(
-    'google-login.html',
-    'google_oauth',
-    `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no,resizable=yes`
-  );
+// Dynamically initialize Firebase Auth if config is present
+async function initFirebase() {
+  if (!CONFIG.FIREBASE) return null;
+  if (firebaseAuth) return firebaseAuth;
 
-  if (!popup) {
-    showToast('Popup blocker detected. Please allow popups to sign in with Google.', 'warning');
+  try {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
+    const { getAuth, GoogleAuthProvider } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+
+    const app = initializeApp(CONFIG.FIREBASE);
+    firebaseAuth = getAuth(app);
+    firebaseProvider = new GoogleAuthProvider();
+    return firebaseAuth;
+  } catch (e) {
+    console.error("Failed to initialize Firebase:", e);
+    showToast("Firebase initialization failed", "error");
+    return null;
   }
 }
 
-// Global listener for the Google login popup message
+// Unified Google Login Success Handler
+async function handleSuccessfulGoogleLogin(googleData) {
+  // Check if user already exists
+  let user = UserDB.getByEmail(googleData.email);
+  let isNewUser = false;
+
+  if (!user) {
+    isNewUser = true;
+    user = UserDB.create({
+      name: googleData.name,
+      email: googleData.email,
+      password: 'google_oauth_secure_token',
+      role: googleData.role || 'student'
+    });
+  } else {
+    // Sync names/avatars if matched
+    user = UserDB.update(user.id, {
+      name: googleData.name,
+      avatar: googleData.avatar || user.avatar
+    });
+  }
+
+  if (isNewUser) {
+    // Direct push to backend to guarantee the user is saved before page navigation
+    await Sync.push(KEYS.USERS, UserDB.getAll());
+  }
+
+  Session.set(user);
+  showToast(`Welcome back, ${user.name}! 🎉`, 'success');
+  setTimeout(() => redirectToRole(user.role), 800);
+}
+
+// ─── GOOGLE LOGIN (Firebase Auth with Custom Simulator Fallback) ───
+async function handleGoogleLogin() {
+  if (CONFIG.FIREBASE) {
+    showToast('Connecting to Google...', 'info');
+    try {
+      const authObj = await initFirebase();
+      if (!authObj) {
+        throw new Error("Could not initialize Firebase Auth.");
+      }
+
+      const { signInWithPopup } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+      const result = await signInWithPopup(authObj, firebaseProvider);
+      const userObj = result.user;
+
+      const googleData = {
+        name: userObj.displayName || "Google User",
+        email: userObj.email,
+        avatar: userObj.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userObj.displayName)}&backgroundColor=6C63FF`,
+        role: 'student' // Default role for new users
+      };
+
+      await handleSuccessfulGoogleLogin(googleData);
+    } catch (error) {
+      console.error("Firebase Google Auth failed:", error);
+      showToast("Sign-In failed: " + error.message, "error");
+    }
+  } else {
+    // Fall back to the simulated Google OAuth account chooser popup
+    const width = 500;
+    const height = 650;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+
+    const popup = window.open(
+      'google-login.html',
+      'google_oauth',
+      `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no,resizable=yes`
+    );
+
+    if (!popup) {
+      showToast('Popup blocker detected. Please allow popups to sign in with Google.', 'warning');
+    }
+  }
+}
+
+// Global listener for the simulated Google login popup message
 window.addEventListener('message', async (event) => {
   if (event.data && event.data.type === 'GOOGLE_LOGIN_SUCCESS') {
-    const googleData = event.data.user;
-
-    // Check if user already exists
-    let user = UserDB.getByEmail(googleData.email);
-    let isNewUser = false;
-
-    if (!user) {
-      isNewUser = true;
-      user = UserDB.create({
-        name: googleData.name,
-        email: googleData.email,
-        password: 'google_oauth_secure_token',
-        role: googleData.role || 'student'
-      });
-    } else {
-      // Sync names/avatars if matched
-      user = UserDB.update(user.id, {
-        name: googleData.name,
-        avatar: googleData.avatar || user.avatar
-      });
-    }
-
-    if (isNewUser) {
-      // Direct push to backend to guarantee the user is saved before page navigation
-      await Sync.push(KEYS.USERS, UserDB.getAll());
-    }
-
-    Session.set(user);
-    showToast(`Welcome back, ${user.name}! 🎉`, 'success');
-    setTimeout(() => redirectToRole(user.role), 800);
+    await handleSuccessfulGoogleLogin(event.data.user);
   }
 });
 

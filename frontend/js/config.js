@@ -10,4 +10,19 @@
  */
 const CONFIG = {
   API_BASE_URL: 'https://examnexa.onrender.com', 
+
+  // Firebase Configuration for Google Sign-In
+  // To enable real Google Auth: uncomment and fill in your Firebase project keys.
+  // If left as null/commented, the application automatically uses the beautiful built-in Google Auth simulator.
+  FIREBASE: null
+  /*
+  FIREBASE: {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  }
+  */
 };
