@@ -295,6 +295,7 @@ async function handleForgotPassword(e) {
         showToast('📧 OTP sent to your email!', 'success');
       }
       showOTPForm();
+      startResendTimer();
     } else {
       showToast('❌ ' + (data.error || 'Failed to send OTP'), 'error');
     }
@@ -320,6 +321,7 @@ function showOTPForm() {
 }
 
 function handleOTPInput(current, nextId) {
+  current.value = current.value.replace(/\D/g, ''); // Allow only numbers
   if (current.value.length >= 1) {
     current.value = current.value.slice(-1); // Only keep last digit
     const next = document.getElementById(nextId);
@@ -477,16 +479,23 @@ function handleGoogleLogin() {
   showToast('Connecting to Google...', 'info');
 
   // Simulate OAuth delay
-  setTimeout(() => {
+  setTimeout(async () => {
     // Check if demo google user exists
     let googleUser = UserDB.getByEmail('google.user@gmail.com');
+    let isNewUser = false;
     if (!googleUser) {
+      isNewUser = true;
       googleUser = UserDB.create({
         name: 'Google User',
         email: 'google.user@gmail.com',
         password: 'google_oauth',
         role: 'student',
       });
+    }
+
+    if (isNewUser) {
+      // Wait for sync to complete so the new user isn't lost on redirect
+      await Sync.push(KEYS.USERS, UserDB.getAll());
     }
 
     Session.set(googleUser);
