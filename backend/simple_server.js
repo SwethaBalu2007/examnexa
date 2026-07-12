@@ -661,8 +661,8 @@ const server = http.createServer((req, res) => {
 
   const urlPath = req.url.split('?')[0];
 
-  // ── Health Check (keeps Render alive & used by monitoring) ──
-  if (req.method === 'GET' && (urlPath === '/api/health' || urlPath === '/health')) {
+  // ── Health Check & Ping (keeps Render alive) ──
+  if (req.method === 'GET' && (urlPath === '/api/health' || urlPath === '/health' || urlPath === '/api/ping')) {
     res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
     return res.end(JSON.stringify({ 
       status: 'ok', 

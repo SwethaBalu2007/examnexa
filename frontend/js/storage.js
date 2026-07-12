@@ -567,6 +567,82 @@ function seedDemoData() {
 }
 
 // ─── Initialize on load ────────────────────────────────────
+// ─── Server Wake-Up (Pre-warm Render free tier) ────────────
+// Fires immediately so the server is ready by the time the user clicks anything.
+function wakeServer() {
+  if (!CONFIG.API_BASE_URL) return;
+
+  let bannerShown = false;
+  let banner = null;
+
+  // If server doesn't respond in 1.5s, show a visible banner
+  const bannerTimer = setTimeout(() => {
+    bannerShown = true;
+    banner = document.createElement('div');
+    banner.id = 'server-wake-banner';
+    banner.style.cssText = `
+      position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
+      background: linear-gradient(90deg, #f59e0b, #d97706);
+      color: #fff; text-align: center; padding: 10px 16px;
+      font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    `;
+    banner.innerHTML = `
+      <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+      </svg>
+      Server is starting up — this takes about 30 seconds on first load. Please wait...
+      <span id="wake-secs" style="background:rgba(0,0,0,0.2);border-radius:4px;padding:1px 6px;">30s</span>
+    `;
+    document.body.appendChild(banner);
+
+    // Countdown timer on the banner
+    let secs = 30;
+    const countdownInterval = setInterval(() => {
+      secs--;
+      const el = document.getElementById('wake-secs');
+      if (el) el.textContent = secs + 's';
+      if (secs <= 0) clearInterval(countdownInterval);
+    }, 1000);
+  }, 1500);
+
+  // Ping with a 45-second timeout
+  const controller = new AbortController();
+  const fetchTimeout = setTimeout(() => controller.abort(), 45000);
+
+  fetch(CONFIG.API_BASE_URL + '/api/ping', { signal: controller.signal })
+    .then(() => {
+      clearTimeout(bannerTimer);
+      clearTimeout(fetchTimeout);
+      if (bannerShown && banner) {
+        banner.style.background = 'linear-gradient(90deg, #10b981, #059669)';
+        banner.innerHTML = '✅ Server is ready!';
+        setTimeout(() => {
+          if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
+        }, 2000);
+      }
+    })
+    .catch(() => {
+      clearTimeout(bannerTimer);
+      clearTimeout(fetchTimeout);
+      if (bannerShown && banner) {
+        banner.style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
+        banner.innerHTML = '❌ Server offline. Some features may not work.';
+        setTimeout(() => {
+          if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
+        }, 4000);
+      }
+    });
+}
+
+// Fire immediately — don't wait for DOMContentLoaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', wakeServer);
+} else {
+  wakeServer();
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. First try to pull latest cloud data
   await Sync.pullAll();
