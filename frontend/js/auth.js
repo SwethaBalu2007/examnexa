@@ -347,11 +347,16 @@ async function handleForgotPassword(e) {
   startResendTimer();
   showToast('📧 OTP generated! Sending to your email...', 'info');
 
-  // Try to send via server in the background (fire-and-forget, 8s timeout)
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  // Use Netlify function URL (never sleeps) — falls back to Render backend
+  // /.netlify/functions/send-otp works automatically on Netlify-hosted sites
+  const otpEndpoint = CONFIG.NETLIFY_URL
+    ? CONFIG.NETLIFY_URL + '/.netlify/functions/send-otp'
+    : '/.netlify/functions/send-otp';
 
-  fetch(CONFIG.API_BASE_URL + '/api/email/send-otp', {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  fetch(otpEndpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, name: user.name, otp }),
@@ -361,18 +366,21 @@ async function handleForgotPassword(e) {
     .then(data => {
       clearTimeout(timeoutId);
       if (data.success && !data.mock) {
-        showToast('✅ OTP sent to your email!', 'success');
+        showToast('✅ OTP sent to your email! Check your inbox.', 'success');
+      } else if (data.mock) {
+        // Netlify not configured yet — show on screen
+        showOTPOnScreen(otp);
       } else {
-        // Server returned mock/failed — show OTP on screen
         showOTPOnScreen(otp);
       }
     })
     .catch(() => {
       clearTimeout(timeoutId);
-      // Server unreachable — show OTP on screen so user can still proceed
+      // Netlify function unreachable — show OTP on screen
       showOTPOnScreen(otp);
     });
 }
+
 
 
 // ─── OTP VERIFICATION ─────────────────────────────────────────
