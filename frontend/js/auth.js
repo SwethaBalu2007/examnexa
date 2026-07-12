@@ -362,21 +362,31 @@ async function handleForgotPassword(e) {
     body: JSON.stringify({ email, name: user.name, otp }),
     signal: controller.signal,
   })
-    .then(r => r.json())
+    .then(async r => {
+      const isJson = r.headers.get('content-type')?.includes('application/json');
+      const data = isJson ? await r.json() : null;
+      if (!r.ok) {
+        throw new Error((data && data.error) || `HTTP error ${r.status}`);
+      }
+      return data;
+    })
     .then(data => {
       clearTimeout(timeoutId);
       if (data.success && !data.mock) {
         showToast('✅ OTP sent to your email! Check your inbox.', 'success');
       } else if (data.mock) {
-        // Netlify not configured yet — show on screen
+        console.warn('Netlify function run in mock mode:', data.reason);
+        showToast('ℹ️ SMTP credentials missing on Netlify. Code shown on screen.', 'info', 6000);
         showOTPOnScreen(otp);
       } else {
+        showToast('⚠️ OTP generated but could not email: ' + (data.error || 'Unknown error'), 'warning', 6000);
         showOTPOnScreen(otp);
       }
     })
-    .catch(() => {
+    .catch(err => {
       clearTimeout(timeoutId);
-      // Netlify function unreachable — show OTP on screen
+      console.error('OTP send failed:', err);
+      showToast('❌ Email send failed: ' + err.message, 'error', 8000);
       showOTPOnScreen(otp);
     });
 }
