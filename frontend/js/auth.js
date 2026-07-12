@@ -250,9 +250,75 @@ function handleRegister(e) {
   showSuccess('Account Created!', 'Your account has been created. Please sign in to continue.');
 }
 
-// ─── FORGOT PASSWORD (Server-side OTP) ────────────────────────
+// ─── FORGOT PASSWORD (Browser-based OTP — no server needed) ───
 let forgotEmail = '';
 let otpVerified = false;
+
+// Local OTP store — works even when server is offline
+const localOTP = {
+  code: null,
+  expiry: null,
+  attempts: 0,
+
+  generate() {
+    this.code = String(Math.floor(100000 + Math.random() * 900000));
+    this.expiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+    this.attempts = 0;
+    return this.code;
+  },
+
+  verify(input) {
+    if (!this.code) return { valid: false, error: 'No OTP generated. Please request a new one.' };
+    if (Date.now() > this.expiry) {
+      this.code = null;
+      return { valid: false, error: 'OTP has expired. Please request a new one.' };
+    }
+    this.attempts++;
+    if (this.attempts > 5) {
+      this.code = null;
+      return { valid: false, error: 'Too many attempts. Please request a new OTP.' };
+    }
+    if (this.code !== input) {
+      return { valid: false, error: `Incorrect OTP. ${5 - this.attempts} attempt(s) remaining.` };
+    }
+    this.code = null;
+    return { valid: true };
+  }
+};
+
+// Show the OTP on screen as a fallback when email is unavailable
+function showOTPOnScreen(otp) {
+  // Remove old banner if it exists
+  const old = document.getElementById('otp-screen-display');
+  if (old) old.remove();
+
+  const box = document.createElement('div');
+  box.id = 'otp-screen-display';
+  box.style.cssText = `
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 99999; background: #1e1e2d; border: 2px solid #6C63FF;
+    border-radius: 16px; padding: 32px 40px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6); font-family: 'Inter', sans-serif;
+    color: #e0e0e0; max-width: 360px; width: 90%;
+  `;
+  box.innerHTML = `
+    <div style="font-size:2.5rem;margin-bottom:12px">📧</div>
+    <h3 style="margin:0 0 8px;color:#fff;font-size:1.1rem">Email delivery unavailable</h3>
+    <p style="font-size:13px;color:#888;margin:0 0 20px">The server is offline. Use this code to reset your password:</p>
+    <div style="
+      font-size: 2.2rem; font-weight: 800; letter-spacing: 10px;
+      color: #6C63FF; background: rgba(108,99,255,0.1);
+      border: 2px dashed #6C63FF; border-radius: 12px;
+      padding: 16px; margin-bottom: 20px;
+    ">${otp}</div>
+    <p style="font-size:12px;color:#f59e0b;margin:0 0 20px">⏰ Valid for 5 minutes — do not close this window</p>
+    <button onclick="document.getElementById('otp-screen-display').remove()" style="
+      background:#6C63FF;color:#fff;border:none;border-radius:8px;
+      padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;
+    ">Got it — I wrote it down ✓</button>
+  `;
+  document.body.appendChild(box);
+}
 
 async function handleForgotPassword(e) {
   e.preventDefault();
@@ -273,55 +339,41 @@ async function handleForgotPassword(e) {
 
   forgotEmail = email;
 
-  // Show loading state
-  const btn = e.target.querySelector('button[type="submit"]');
-  const origText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending OTP...';
+  // Generate OTP locally — works 100% offline, no waiting for server
+  const otp = localOTP.generate();
 
-  try {
-    // 12-second timeout — Render free tier can take ~10s to wake up
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+  // Show OTP form IMMEDIATELY — no spinner, no waiting
+  showOTPForm();
+  startResendTimer();
+  showToast('📧 OTP generated! Sending to your email...', 'info');
 
-    let res;
-    try {
-      res = await fetch(CONFIG.API_BASE_URL + '/api/email/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name: user.name }),
-        signal: controller.signal,
-      });
-    } finally {
+  // Try to send via server in the background (fire-and-forget, 8s timeout)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  fetch(CONFIG.API_BASE_URL + '/api/email/send-otp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, name: user.name, otp }),
+    signal: controller.signal,
+  })
+    .then(r => r.json())
+    .then(data => {
       clearTimeout(timeoutId);
-    }
-
-    const data = await res.json();
-
-    if (data.success) {
-      if (data.mock) {
-        // In offline mode, show OTP in a toast for testing
-        showToast(`📧 OTP (test mode): ${data.otp}`, 'info', 15000);
+      if (data.success && !data.mock) {
+        showToast('✅ OTP sent to your email!', 'success');
       } else {
-        showToast('📧 OTP sent to your email!', 'success');
+        // Server returned mock/failed — show OTP on screen
+        showOTPOnScreen(otp);
       }
-      showOTPForm();
-      startResendTimer();
-    } else {
-      showToast('❌ ' + (data.error || 'Failed to send OTP'), 'error');
-    }
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      showToast('⏳ Server is waking up — please wait 30 seconds and try again.', 'warning');
-    } else {
-      showToast('❌ Server error. Please try again.', 'error');
-    }
-    console.error(err);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = origText;
-  }
+    })
+    .catch(() => {
+      clearTimeout(timeoutId);
+      // Server unreachable — show OTP on screen so user can still proceed
+      showOTPOnScreen(otp);
+    });
 }
+
 
 // ─── OTP VERIFICATION ─────────────────────────────────────────
 function showOTPForm() {
@@ -377,31 +429,18 @@ async function verifyOTPCode(e) {
     return;
   }
 
-  const btn = e.target.querySelector('button[type="submit"]');
-  const origText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+  // Verify locally — no server call needed
+  const result = localOTP.verify(otp);
 
-  try {
-    const res = await fetch(CONFIG.API_BASE_URL + '/api/email/verify-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: forgotEmail, otp }),
-    });
-    const data = await res.json();
-
-    if (data.verified) {
-      otpVerified = true;
-      showToast('✅ OTP verified! Set your new password.', 'success');
-      showResetForm();
-    } else {
-      showToast('❌ ' + (data.message || 'Invalid OTP'), 'error');
-    }
-  } catch (err) {
-    showToast('❌ Verification failed. Try again.', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = origText;
+  if (result.valid) {
+    otpVerified = true;
+    // Close on-screen display if open
+    const display = document.getElementById('otp-screen-display');
+    if (display) display.remove();
+    showToast('✅ OTP verified! Set your new password.', 'success');
+    showResetForm();
+  } else {
+    showToast('❌ ' + result.error, 'error');
   }
 }
 
