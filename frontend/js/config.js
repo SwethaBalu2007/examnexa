@@ -9,7 +9,11 @@
  * Set API_BASE_URL to an empty string ''.
  */
 const CONFIG = {
-  API_BASE_URL: 'https://examnexa.onrender.com', 
+  API_BASE_URL: 'https://examnexa.onrender.com',
+
+  // Your Netlify site URL — used for serverless function calls (OTP email, etc.)
+  // Change this if your Netlify site URL is different
+  NETLIFY_URL: 'https://examnexa.netlify.app',
 
   // Firebase Configuration for Google Sign-In
   // To enable real Google Auth: uncomment and fill in your Firebase project keys.

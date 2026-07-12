@@ -1,6 +1,5 @@
 // Netlify Serverless Function: Send OTP Email
-// This runs on Netlify's servers - never sleeps, responds in milliseconds.
-// Uses your Gmail credentials via Nodemailer.
+// Uses Gmail SMTP via Nodemailer — runs on Netlify, never sleeps.
 
 const nodemailer = require('nodemailer');
 
@@ -37,16 +36,25 @@ exports.handler = async (event) => {
   const { email, name, otp } = body;
 
   if (!email || !otp) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Email and OTP are required' }) };
+    return {
+      statusCode: 400,
+      headers: CORS,
+      body: JSON.stringify({ error: 'Email and OTP are required' })
+    };
   }
 
-  // If email credentials are not configured, return mock mode
+  // If email credentials are not configured — return mock mode
   if (!EMAIL_USER || !EMAIL_PASS) {
-    console.log(`[OTP-MOCK] No SMTP credentials. OTP for ${email}: ${otp}`);
+    console.log(`[OTP-MOCK] SMTP not configured. OTP for ${email}: ${otp}`);
     return {
       statusCode: 200,
       headers: CORS,
-      body: JSON.stringify({ success: true, mock: true, otp, reason: 'SMTP not configured' })
+      body: JSON.stringify({
+        success: true,
+        mock: true,
+        otp,
+        reason: 'EMAIL_USER or EMAIL_PASS not set in Netlify environment variables'
+      })
     };
   }
 
@@ -55,7 +63,14 @@ exports.handler = async (event) => {
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure: SMTP_PORT === 465,
-      auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+      auth: {
+        user: EMAIL_USER,
+        pass: EMAIL_PASS,
+      },
+      // Required for Gmail App Passwords
+      tls: {
+        rejectUnauthorized: false
+      }
     });
 
     const html = `
@@ -63,7 +78,7 @@ exports.handler = async (event) => {
         background:linear-gradient(135deg,#1e1e2d 0%,#2a2a3d 100%);
         border-radius:16px;overflow:hidden;border:1px solid rgba(108,99,255,0.2);">
         <div style="background:linear-gradient(135deg,#6C63FF 0%,#897DFF 100%);padding:32px 24px;text-align:center;">
-          <div style="font-size:28px;font-weight:800;color:#fff;margin-bottom:4px">🔐 NEXA</div>
+          <div style="font-size:28px;font-weight:800;color:#fff;margin-bottom:4px">&#128274; NEXA</div>
           <div style="color:rgba(255,255,255,0.8);font-size:14px">Password Reset Verification</div>
         </div>
         <div style="padding:32px 24px;color:#e0e0e0;">
@@ -74,7 +89,7 @@ exports.handler = async (event) => {
             letter-spacing:8px;font-size:32px;font-weight:800;color:#6C63FF;">
             ${otp}
           </div>
-          <p style="color:#888;font-size:13px">⏰ This code expires in <strong>5 minutes</strong>.</p>
+          <p style="color:#888;font-size:13px">&#9200; This code expires in <strong>5 minutes</strong>.</p>
           <p style="color:#888;font-size:13px">If you didn't request this, please ignore this email.</p>
           <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:24px 0">
           <p style="color:#666;font-size:12px;text-align:center;margin-bottom:0">NEXA Smart Exam Monitoring System</p>
@@ -84,11 +99,11 @@ exports.handler = async (event) => {
     await transporter.sendMail({
       from: SMTP_FROM,
       to: email,
-      subject: '🔐 NEXA — Password Reset OTP',
+      subject: 'NEXA — Password Reset OTP',
       html,
     });
 
-    console.log(`[OTP] Sent to ${email}`);
+    console.log(`[OTP] Email sent to ${email}`);
     return {
       statusCode: 200,
       headers: CORS,
@@ -96,7 +111,7 @@ exports.handler = async (event) => {
     };
 
   } catch (err) {
-    console.error('[OTP] Send failed:', err.message);
+    console.error('[OTP] SMTP send failed:', err.message);
     return {
       statusCode: 500,
       headers: CORS,
