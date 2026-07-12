@@ -347,11 +347,11 @@ async function handleForgotPassword(e) {
   startResendTimer();
   showToast('📧 OTP generated! Sending to your email...', 'info');
 
-  // Use Netlify function URL (never sleeps) — falls back to Render backend
-  // /.netlify/functions/send-otp works automatically on Netlify-hosted sites
-  const otpEndpoint = CONFIG.NETLIFY_URL
-    ? CONFIG.NETLIFY_URL + '/.netlify/functions/send-otp'
-    : '/.netlify/functions/send-otp';
+  // Dynamically resolve endpoint: use own site origin in production, or fallback to Render backend in local dev
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+  const otpEndpoint = isLocal
+    ? (CONFIG.API_BASE_URL ? CONFIG.API_BASE_URL + '/api/email/send-otp' : '/api/email/send-otp')
+    : (window.location.origin + '/.netlify/functions/send-otp');
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
