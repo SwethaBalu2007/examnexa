@@ -9,7 +9,9 @@
  * Set API_BASE_URL to an empty string ''.
  */
 const CONFIG = {
-  API_BASE_URL: 'https://examnexa.onrender.com',
+  API_BASE_URL: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+    ? 'http://localhost:8080'
+    : 'https://examnexa.onrender.com',
 
   // Your Netlify site URL — used for serverless function calls (OTP email, etc.)
   // Change this if your Netlify site URL is different

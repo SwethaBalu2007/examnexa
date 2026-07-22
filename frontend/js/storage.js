@@ -135,7 +135,7 @@ const UserDB = {
   create: (userData) => {
     const users = UserDB.getAll();
     const newUser = {
-      id: generateId('usr'),
+      id: userData.id || generateId('usr'),
       ...userData,
       createdAt: new Date().toISOString(),
       avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userData.name)}&backgroundColor=6C63FF`,
@@ -187,7 +187,7 @@ const ExamDB = {
   create: (examData) => {
     const exams = ExamDB.getAll();
     const newExam = {
-      id: generateId('exam'),
+      id: examData.id || generateId('exam'),
       ...examData,
       questions: examData.questions || [],
       createdAt: new Date().toISOString(),
@@ -222,7 +222,7 @@ const ResultDB = {
   create: (resultData) => {
     const results = ResultDB.getAll();
     const newResult = {
-      id: generateId('res'),
+      id: resultData.id || generateId('res'),
       ...resultData,
       submittedAt: new Date().toISOString(),
     };
@@ -437,12 +437,20 @@ function parseDateTime(dateStr, timeStr) {
 // ─── Seed Demo Data ────────────────────────────────────────
 function seedDemoData() {
   // Only seed if the admin account is missing (ensures demo access is always available)
-  if (UserDB.getByEmail('admin@nexa.com')) return;
+  // Also force re-seed if we have old seed data (where Arjun Mehra has a non-deterministic ID)
+  const arjun = UserDB.getByEmail('arjun@nexa.com');
+  if (UserDB.getByEmail('admin@nexa.com')) {
+    if (arjun && arjun.id === 'usr_demo_arjun') {
+      return;
+    }
+    console.log('Detected legacy seed data. Resetting storage for deterministic data...');
+    Storage.clear();
+  }
 
   // Demo users
   const admin = UserDB.create({ name: 'Super Admin', email: 'admin@nexa.com', password: 'admin123', role: 'admin' });
   const qm = UserDB.create({ name: 'Dr. Priya Sharma', email: 'qm@nexa.com', password: 'qm123', role: 'question_manager' });
-  const s1 = UserDB.create({ name: 'Arjun Mehra', email: 'arjun@nexa.com', password: 'student123', role: 'student' });
+  const s1 = UserDB.create({ id: 'usr_demo_arjun', name: 'Arjun Mehra', email: 'arjun@nexa.com', password: 'student123', role: 'student' });
   const s2 = UserDB.create({ name: 'Sneha Patel', email: 'sneha@nexa.com', password: 'student123', role: 'student' });
   const s3 = UserDB.create({ name: 'Rahul Kumar', email: 'rahul@nexa.com', password: 'student123', role: 'student' });
   const s4 = UserDB.create({ name: 'Meena Joshi', email: 'meena@nexa.com', password: 'student123', role: 'student' });
@@ -457,6 +465,7 @@ function seedDemoData() {
 
   // Ended exam
   const exam1 = ExamDB.create({
+    id: 'exam_demo_math',
     title: 'Mathematics Fundamentals',
     subject: 'Mathematics',
     date: fmt2(pastDate),
@@ -545,6 +554,8 @@ function seedDemoData() {
     score: 8, totalMarks: 10,
     percentage: 80, passed: true,
     warnings: 1,
+    recordingFilename: 'exam_demo_math_recording.webm',
+    audioFilename: 'exam_demo_math_recording.audio.webm',
     answers: { q1: 1, q2: 1, q3: 1, q4: 0, q5: 0 },
   });
 
