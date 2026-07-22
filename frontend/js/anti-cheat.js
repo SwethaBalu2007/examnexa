@@ -41,6 +41,13 @@ const AntiCheat = {
   _handleKeydown(e) {
     if (!this.active) return;
 
+    // Block Shift key usage
+    if (e.key === 'Shift') {
+      e.preventDefault();
+      this._triggerWarning('keyboard', 'Shift key used');
+      return;
+    }
+
     // Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
     if (e.key === 'F12') {
       e.preventDefault();
